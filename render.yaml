@@ -3,12 +3,14 @@ services:
     name: bhookhmarket-api
     runtime: node
     plan: free
-    buildCommand: npm install && npx prisma generate --schema packages/database/prisma/schema.prisma && npm run build --workspace @bhookhmarket/api
+    buildCommand: npm install && npx prisma generate --schema packages/database/prisma/schema.prisma && npm run build --workspace @bhookhmarket/shared && npm run build --workspace @bhookhmarket/api
     startCommand: node packages/api/dist/api/src/index.js
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
         value: production
+      - key: APP_URL
+        sync: false
       - key: DATABASE_URL
         sync: false
       - key: REDIS_URL
@@ -29,11 +31,27 @@ services:
         sync: false
       - key: MSG91_SENDER_ID
         value: BHOOKHM
+      - key: GOOGLE_CLIENT_ID
+        sync: false
       - key: CORS_ORIGINS
         sync: false
+      - key: OTP_DEV_MODE
+        value: "false"
       - key: RAZORPAY_KEY_ID
         sync: false
       - key: RAZORPAY_KEY_SECRET
         sync: false
       - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: FIREBASE_PROJECT_ID
+        sync: false
+      - key: FIREBASE_CLIENT_EMAIL
+        sync: false
+      - key: FIREBASE_PRIVATE_KEY
         sync: false

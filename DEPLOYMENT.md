@@ -21,10 +21,14 @@ BhookhMarket Monorepo (Turborepo)
 1. Push to GitHub
 2. Create a new Render Web Service
 3. Set:
-   - Build Command: `npm install && cd packages/database && npx prisma migrate deploy && cd ../api && npm run build`
-   - Start Command: `node packages/api/dist/index.js`
+    - Build Command: `npm install && npx prisma generate --schema packages/database/prisma/schema.prisma && npm run build --workspace @bhookhmarket/shared && npm run build --workspace @bhookhmarket/api`
+    - Start Command: `node packages/api/dist/api/src/index.js`
 4. Add a Render Postgres database (or connect Supabase/Neon)
-5. Add a Redis instance (Render Redis or Upstash)
+5. Add Redis (Upstash is suitable for the free tier)
+
+This repository currently has no Prisma migration directory. Apply the schema to
+the production database with a reviewed migration process before first launch;
+do not use `prisma db push` automatically in production.
 6. Set all environment variables from `.env.example`
 
 ### Mobile → Expo Go / EAS

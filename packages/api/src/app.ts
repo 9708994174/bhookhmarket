@@ -7,7 +7,7 @@ import compression from 'compression';
 
 import { config } from './config';
 import { logger } from './utils/logger';
-import { errorHandler } from './middleware/errorHandler';
+import { AppError, errorHandler } from './middleware/errorHandler';
 import { rateLimiter } from './middleware/rateLimiter';
 import { prisma } from './lib/prisma';
 import { redis } from './lib/redis';
@@ -30,7 +30,13 @@ const app = express();
 app.use(helmet({ crossOriginResourcePolicy: false }));
 app.use(
   cors({
-    origin: true,
+    origin: (origin, callback) => {
+      if (!origin || config.cors.origins.includes('*') || config.cors.origins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(new AppError('Origin not allowed by CORS', 403));
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   })

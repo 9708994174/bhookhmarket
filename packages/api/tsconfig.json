@@ -14,7 +14,7 @@
     "declarationMap": true,
     "sourceMap": true,
     "paths": {
-      "@bhookhmarket/shared": ["../../packages/shared/src"]
+      "@bhookhmarket/shared": ["../../packages/shared/dist"]
     }
   },
   "include": ["src/**/*"],
