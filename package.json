@@ -1,0 +1,42 @@
+{
+  "name": "bhookhmarket",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "db:generate": "cd packages/database && npx prisma generate",
+    "db:migrate": "cd packages/database && npx prisma migrate dev",
+    "db:studio": "cd packages/database && npx prisma studio",
+    "db:seed": "cd packages/database && npx ts-node src/seed.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "babel-preset-expo": "^57.0.7",
+    "turbo": "^2.0.0",
+    "typescript": "^5.4.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "packageManager": "npm@10.8.2",
+  "overrides": {
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
+  },
+  "allowScripts": {
+    "prisma@5.22.0": true,
+    "@prisma/client@5.22.0": true,
+    "@prisma/engines@5.22.0": true,
+    "msgpackr-extract@3.0.4": true,
+    "protobufjs@7.6.5": true,
+    "unrs-resolver@1.12.2": true
+  }
+}

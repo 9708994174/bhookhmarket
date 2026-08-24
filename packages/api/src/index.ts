@@ -1,0 +1,52 @@
+import app from './app';
+import { config } from './config';
+import { logger } from './utils/logger';
+import { prisma } from './lib/prisma';
+import { redis } from './lib/redis';
+import { startWorkers } from './jobs/workers';
+
+async function bootstrap() {
+  try {
+    await prisma.$connect();
+    logger.info('Connected to PostgreSQL');
+
+    // Redis connection
+    try {
+      await redis.ping();
+      logger.info('Connected to Redis');
+
+      // Start BullMQ workers if Redis is available
+      await startWorkers();
+      logger.info('Background workers started');
+    } catch (redisErr: any) {
+      if (config.nodeEnv === 'production') {
+        throw redisErr;
+      }
+      logger.warn(`Redis warning: ${redisErr?.message || 'Redis unavailable'}`);
+    }
+
+    // Start HTTP server on all interfaces (0.0.0.0)
+    const server = app.listen(config.port, '0.0.0.0', () => {
+      logger.info(`BhookhMarket API running on port ${config.port} on 0.0.0.0 in ${config.nodeEnv} mode`);
+      logger.info(`Health check available at http://localhost:${config.port}/health`);
+    });
+
+    // Graceful shutdown
+    const shutdown = async () => {
+      logger.info('Shutting down gracefully...');
+      server.close(async () => {
+        try { await prisma.$disconnect(); } catch {}
+        try { await redis.quit(); } catch {}
+        process.exit(0);
+      });
+    };
+
+    process.on('SIGTERM', shutdown);
+    process.on('SIGINT', shutdown);
+  } catch (error) {
+    logger.error('Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+bootstrap();

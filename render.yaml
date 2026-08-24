@@ -1,0 +1,39 @@
+services:
+  - type: web
+    name: bhookhmarket-api
+    runtime: node
+    plan: free
+    buildCommand: npm install && npx prisma generate --schema packages/database/prisma/schema.prisma && npm run build --workspace @bhookhmarket/api
+    startCommand: node packages/api/dist/api/src/index.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_REFRESH_SECRET
+        sync: false
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: JWT_REFRESH_EXPIRES_IN
+        value: 30d
+      - key: OTP_PROVIDER
+        value: msg91
+      - key: MSG91_AUTH_KEY
+        sync: false
+      - key: MSG91_TEMPLATE_ID
+        sync: false
+      - key: MSG91_SENDER_ID
+        value: BHOOKHM
+      - key: CORS_ORIGINS
+        sync: false
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false

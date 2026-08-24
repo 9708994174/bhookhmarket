@@ -1,0 +1,582 @@
+// =============================================================================
+// BhookhMarket — Prisma Schema
+// PostgreSQL 16 + PostGIS (via Unsupported for geo columns)
+// =============================================================================
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions", "fullTextSearch"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [postgis, pg_trgm, unaccent]
+}
+
+// =============================================================================
+// ENUMS
+// =============================================================================
+
+enum UserRole {
+  CONSUMER
+  PARTNER
+  ADMIN
+}
+
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  MORE_INFO_REQUIRED
+}
+
+enum PartnerCategory {
+  BAKERY
+  CAFE
+  RESTAURANT
+  HOTEL
+  SUPERMARKET
+  CATERER
+  CLOUD_KITCHEN
+}
+
+enum BagStatus {
+  DRAFT
+  ACTIVE
+  LOW_STOCK
+  SOLD_OUT
+  EXPIRED
+  CANCELLED
+}
+
+enum OrderStatus {
+  PENDING_PAYMENT
+  PAYMENT_FAILED
+  PAID
+  READY_FOR_PICKUP
+  PICKED_UP
+  COMPLETED
+  CANCELLED
+  REFUND_PENDING
+  REFUNDED
+  EXPIRED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+enum PaymentProvider {
+  RAZORPAY
+  MOCK
+}
+
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  PAID
+  FAILED
+}
+
+enum NotificationType {
+  ORDER_CONFIRMED
+  ORDER_CANCELLED
+  PICKUP_REMINDER
+  BAG_AVAILABLE
+  BAG_SOLD_OUT
+  FAVORITE_BAG_AVAILABLE
+  REFUND_PROCESSED
+  PARTNER_APPROVED
+  PARTNER_REJECTED
+  GENERAL
+}
+
+enum SupportTicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum DocumentType {
+  FSSAI_LICENSE
+  GST_CERTIFICATE
+  PAN_CARD
+  AADHAR
+  BUSINESS_REGISTRATION
+  BANK_STATEMENT
+  OTHER
+}
+
+// =============================================================================
+// CORE MODELS
+// =============================================================================
+
+model User {
+  id           String   @id @default(cuid())
+  name         String?
+  email        String?  @unique
+  phone        String   @unique
+  role         UserRole @default(CONSUMER)
+  profileImage String?
+  isActive     Boolean  @default(true)
+  isVerified   Boolean  @default(false)
+  fcmToken     String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Consumer relations
+  orders         Order[]
+  reviews        Review[]
+  favorites      Favorite[]
+  notifications  Notification[]
+  supportTickets SupportTicket[]
+  savedAddresses SavedAddress[]
+  impactStats    ImpactStats?
+
+  // Partner relations
+  partnerProfile Partner?
+
+  // Auth
+  otpSessions OtpSession[]
+  refreshTokens RefreshToken[]
+
+  @@index([phone])
+  @@index([email])
+  @@map("users")
+}
+
+model OtpSession {
+  id        String   @id @default(cuid())
+  phone     String
+  otp       String
+  expiresAt DateTime
+  verified  Boolean  @default(false)
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now())
+
+  user   User?   @relation(fields: [userId], references: [id])
+  userId String?
+
+  @@index([phone])
+  @@map("otp_sessions")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model SavedAddress {
+  id        String   @id @default(cuid())
+  userId    String
+  label     String   // "Home", "Work", etc.
+  address   String
+  city      String
+  state     String
+  pincode   String
+  latitude  Float
+  longitude Float
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("saved_addresses")
+}
+
+// =============================================================================
+// PARTNER
+// =============================================================================
+
+model Partner {
+  id                 String             @id @default(cuid())
+  ownerUserId        String             @unique
+  businessName       String
+  slug               String             @unique
+  category           PartnerCategory
+  description        String?
+  phone              String
+  email              String?
+  address            String
+  city               String
+  state              String
+  pincode            String
+  latitude           Float
+  longitude          Float
+  coverImage         String?
+  logoImage          String?
+  gstin              String?
+  fssaiNumber        String?
+  verificationStatus VerificationStatus @default(PENDING)
+  verificationNote   String?
+  rating             Float              @default(0)
+  totalRatings       Int                @default(0)
+  isActive           Boolean            @default(false)
+  isOpen             Boolean            @default(true)
+  openingHours       Json?              // { mon: { open: "09:00", close: "22:00" }, ... }
+  bankDetails        Json?              // Encrypted bank account info
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  owner           User              @relation(fields: [ownerUserId], references: [id])
+  documents       PartnerDocument[]
+  bags            Bag[]
+  orders          Order[]
+  reviews         Review[]
+  favorites       Favorite[]
+  payouts         Payout[]
+  notifications   PartnerNotification[]
+
+  @@index([city])
+  @@index([category])
+  @@index([verificationStatus])
+  @@index([latitude, longitude])
+  @@map("partners")
+}
+
+model PartnerDocument {
+  id                 String             @id @default(cuid())
+  partnerId          String
+  documentType       DocumentType
+  documentUrl        String
+  verificationStatus VerificationStatus @default(PENDING)
+  verificationNote   String?
+  uploadedAt         DateTime           @default(now())
+
+  partner Partner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+
+  @@index([partnerId])
+  @@map("partner_documents")
+}
+
+model PartnerNotification {
+  id        String   @id @default(cuid())
+  partnerId String
+  title     String
+  message   String
+  type      String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  partner Partner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+
+  @@index([partnerId])
+  @@map("partner_notifications")
+}
+
+// =============================================================================
+// BAGS
+// =============================================================================
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  icon        String?
+  color       String?
+  displayOrder Int     @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  @@map("categories")
+}
+
+model Bag {
+  id                String   @id @default(cuid())
+  partnerId         String
+  title             String
+  description       String?
+  category          PartnerCategory
+  originalValue     Float
+  sellingPrice      Float
+  platformFee       Float    @default(15)
+  quantity          Int
+  remainingQuantity Int
+  pickupStart       DateTime
+  pickupEnd         DateTime
+  imageUrl          String?
+  status            BagStatus @default(DRAFT)
+  isVegetarian      Boolean  @default(false)
+  isVegan           Boolean  @default(false)
+  isNonVegetarian   Boolean  @default(false)
+  containsDairy     Boolean  @default(false)
+  containsNuts      Boolean  @default(false)
+  containsGluten    Boolean  @default(false)
+  foodSafetyDeclared Boolean @default(false)
+  viewCount         Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  partner  Partner  @relation(fields: [partnerId], references: [id])
+  orders   Order[]
+
+  @@index([partnerId])
+  @@index([status])
+  @@index([pickupStart, pickupEnd])
+  @@index([category])
+  @@map("bags")
+}
+
+// =============================================================================
+// ORDERS
+// =============================================================================
+
+model Order {
+  id           String      @id @default(cuid())
+  orderNumber  String      @unique @default(cuid())
+  userId       String
+  partnerId    String
+  bagId        String
+  quantity     Int         @default(1)
+  subtotal     Float
+  platformFee  Float
+  tax          Float       @default(0)
+  total        Float
+  paymentStatus PaymentStatus @default(PENDING)
+  orderStatus  OrderStatus @default(PENDING_PAYMENT)
+  pickupCode   String?     @unique
+  pickupQr     String?     // Base64 QR or URL
+  pickedUpAt   DateTime?
+  cancelReason String?
+  refundAmount Float?
+  expiresAt    DateTime?   // Auto-cancel if not paid within X mins
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id])
+  partner  Partner   @relation(fields: [partnerId], references: [id])
+  bag      Bag       @relation(fields: [bagId], references: [id])
+  payment  Payment?
+  review   Review?
+  payout   Payout?
+  statusHistory OrderStatusHistory[]
+
+  @@index([userId])
+  @@index([partnerId])
+  @@index([bagId])
+  @@index([orderStatus])
+  @@index([pickupCode])
+  @@map("orders")
+}
+
+model OrderStatusHistory {
+  id        String      @id @default(cuid())
+  orderId   String
+  status    OrderStatus
+  note      String?
+  createdAt DateTime    @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@map("order_status_history")
+}
+
+// =============================================================================
+// PAYMENTS
+// =============================================================================
+
+model Payment {
+  id                String          @id @default(cuid())
+  orderId           String          @unique
+  provider          PaymentProvider @default(RAZORPAY)
+  providerOrderId   String?         // Razorpay order_id
+  providerPaymentId String?         // Razorpay payment_id
+  providerSignature String?         // Razorpay signature (for verification)
+  amount            Float
+  currency          String          @default("INR")
+  status            PaymentStatus   @default(PENDING)
+  method            String?         // "upi", "card", "netbanking", etc.
+  upiId             String?
+  refundId          String?
+  refundAmount      Float?
+  metadata          Json?           // Raw payment gateway response
+  failureReason     String?
+  webhookVerified   Boolean         @default(false)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id])
+
+  @@index([orderId])
+  @@index([providerPaymentId])
+  @@map("payments")
+}
+
+// =============================================================================
+// PAYOUTS
+// =============================================================================
+
+model Payout {
+  id           String       @id @default(cuid())
+  partnerId    String
+  orderId      String       @unique
+  grossAmount  Float
+  commission   Float
+  commissionPct Float
+  netAmount    Float
+  status       PayoutStatus @default(PENDING)
+  payoutDate   DateTime?
+  utrNumber    String?      // UPI transaction reference
+  metadata     Json?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  partner Partner @relation(fields: [partnerId], references: [id])
+  order   Order   @relation(fields: [orderId], references: [id])
+
+  @@index([partnerId])
+  @@index([status])
+  @@map("payouts")
+}
+
+// =============================================================================
+// REVIEWS
+// =============================================================================
+
+model Review {
+  id        String   @id @default(cuid())
+  userId    String
+  partnerId String
+  orderId   String   @unique
+  rating    Float
+  tags      String[] // ["food_quality", "value", "packaging", etc.]
+  comment   String?
+  isVisible Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id])
+  partner Partner @relation(fields: [partnerId], references: [id])
+  order   Order   @relation(fields: [orderId], references: [id])
+
+  @@index([partnerId])
+  @@index([userId])
+  @@map("reviews")
+}
+
+// =============================================================================
+// FAVORITES
+// =============================================================================
+
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  partnerId String
+  notifyOnBag Boolean @default(true)
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  partner Partner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, partnerId])
+  @@index([userId])
+  @@map("favorites")
+}
+
+// =============================================================================
+// NOTIFICATIONS
+// =============================================================================
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      NotificationType
+  data      Json?            // Extra payload (orderId, bagId, etc.)
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+// =============================================================================
+// SUPPORT
+// =============================================================================
+
+model SupportTicket {
+  id          String              @id @default(cuid())
+  userId      String
+  orderId     String?
+  category    String
+  description String
+  status      SupportTicketStatus @default(OPEN)
+  resolution  String?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@map("support_tickets")
+}
+
+// =============================================================================
+// ADMIN CONFIG
+// =============================================================================
+
+model CommissionSettings {
+  id                 String   @id @default(cuid())
+  name               String   @default("default")
+  platformFeeFixed   Float    @default(15)
+  commissionPercent  Float    @default(15)
+  minPartnerPayout   Float    @default(0)
+  taxPercent         Float    @default(0)
+  isActive           Boolean  @default(true)
+  effectiveFrom      DateTime @default(now())
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@map("commission_settings")
+}
+
+// =============================================================================
+// IMPACT TRACKING
+// =============================================================================
+
+model ImpactStats {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  totalBagsRescued Int    @default(0)
+  totalMoneySaved Float   @default(0)
+  totalCo2Saved  Float    @default(0) // kg
+  totalFoodSaved Float    @default(0) // kg
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("impact_stats")
+}
+
+model PlatformStats {
+  id              String   @id @default(cuid())
+  date            DateTime @unique @db.Date
+  totalBagsPosted Int      @default(0)
+  totalBagsSold   Int      @default(0)
+  totalOrders     Int      @default(0)
+  totalRevenue    Float    @default(0)
+  totalGmv        Float    @default(0)
+  activeUsers     Int      @default(0)
+  activePartners  Int      @default(0)
+  createdAt       DateTime @default(now())
+
+  @@map("platform_stats")
+}
