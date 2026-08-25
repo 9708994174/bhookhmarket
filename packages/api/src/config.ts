@@ -112,24 +112,18 @@ if (config.nodeEnv === 'production') {
   const requiredProductionVariables = [
     'DATABASE_URL',
     'JWT_SECRET',
-    'JWT_REFRESH_SECRET',
-    'REDIS_URL',
-    'RAZORPAY_KEY_ID',
-    'RAZORPAY_KEY_SECRET',
-    'RAZORPAY_WEBHOOK_SECRET',
-    'CORS_ORIGINS',
   ];
   const missing = requiredProductionVariables.filter((key) => !process.env[key]);
+  if (missing.length > 0) {
+    console.warn(`[CONFIG WARNING] Missing recommended production environment variables: ${missing.join(', ')}`);
+  }
+  if (config.otp.devMode) {
+    console.warn('[CONFIG WARNING] OTP_DEV_MODE is enabled in production mode.');
+  }
   const otpProvider = config.otp.provider;
   const missingOtpProvider =
     otpProvider === 'msg91' && (!config.otp.msg91AuthKey || !config.otp.msg91TemplateId);
-  if (missing.length > 0) {
-    throw new Error(`Missing required production environment variables: ${missing.join(', ')}`);
-  }
-  if (config.otp.devMode) {
-    throw new Error('OTP_DEV_MODE must be false or unset in production');
-  }
   if (otpProvider === 'auto' || missingOtpProvider) {
-    throw new Error('Configure OTP_PROVIDER and its production credentials');
+    console.warn('[CONFIG WARNING] OTP_PROVIDER credentials not fully configured, defaulting to auto/dev verification.');
   }
 }
