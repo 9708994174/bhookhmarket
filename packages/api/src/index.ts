@@ -2,7 +2,7 @@ import app from './app';
 import { config } from './config';
 import { logger } from './utils/logger';
 import { prisma } from './lib/prisma';
-import { redis } from './lib/redis';
+import { redis, initRedis } from './lib/redis';
 import { startWorkers } from './jobs/workers';
 
 async function bootstrap() {
@@ -10,19 +10,19 @@ async function bootstrap() {
     await prisma.$connect();
     logger.info('Connected to PostgreSQL');
 
-    // Redis connection
+    // Redis connection & background workers
     try {
-      await redis.ping();
-      logger.info('Connected to Redis');
-
-      // Start BullMQ workers if Redis is available
-      await startWorkers();
-      logger.info('Background workers started');
-    } catch (redisErr: any) {
-      if (config.nodeEnv === 'production') {
-        throw redisErr;
+      const isRedisReady = await initRedis();
+      if (isRedisReady) {
+        try {
+          await startWorkers();
+          logger.info('Background workers started');
+        } catch (workerErr: any) {
+          logger.warn(`Background workers warning: ${workerErr?.message}`);
+        }
       }
-      logger.warn(`Redis warning: ${redisErr?.message || 'Redis unavailable'}`);
+    } catch (redisErr: any) {
+      logger.warn(`Redis init warning: ${redisErr?.message}`);
     }
 
     // Start HTTP server
