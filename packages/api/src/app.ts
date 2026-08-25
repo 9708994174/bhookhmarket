@@ -7,7 +7,7 @@ import compression from 'compression';
 
 import { config } from './config';
 import { logger } from './utils/logger';
-import { AppError, errorHandler } from './middleware/errorHandler';
+import { errorHandler } from './middleware/errorHandler';
 import { rateLimiter } from './middleware/rateLimiter';
 import { prisma } from './lib/prisma';
 import { redis } from './lib/redis';
@@ -27,16 +27,10 @@ import uploadRoutes from './routes/upload';
 const app = express();
 
 // ---- Security ----
-app.use(helmet({ crossOriginResourcePolicy: false }));
+app.use(helmet());
 app.use(
   cors({
-    origin: (origin, callback) => {
-      if (!origin || config.cors.origins.includes('*') || config.cors.origins.includes(origin)) {
-        callback(null, true);
-        return;
-      }
-      callback(new AppError('Origin not allowed by CORS', 403));
-    },
+    origin: config.allowedOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   })

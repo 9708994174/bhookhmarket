@@ -16,12 +16,13 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     splash: {
       image: './assets/splash-icon.png',
       resizeMode: 'contain',
-      backgroundColor: '#1B5E20',
+      backgroundColor: '#0B4D26',
     },
     assetBundlePatterns: ['**/*'],
     ios: {
       supportsTablet: false,
       bundleIdentifier: 'com.bhookhmarket.app',
+      icon: './assets/icon.png',
       infoPlist: {
         NSLocalNetworkUsageDescription:
           'BhookhMarket connects to the local API during development.',
@@ -35,10 +36,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       },
     },
     android: {
-      usesCleartextTraffic: true,
       adaptiveIcon: {
         foregroundImage: './assets/android-icon-foreground.png',
-        backgroundColor: '#1B5E20',
+        backgroundColor: '#0B4D26',
       },
       package: 'com.bhookhmarket.app',
       config: {

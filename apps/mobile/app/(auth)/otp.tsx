@@ -22,7 +22,7 @@ import { useAuthStore } from '../../store';
 const RESEND_SECS = 30;
 
 export default function OtpScreen() {
-  const { phone, devOtp } = useLocalSearchParams<{ phone: string; devOtp?: string }>();
+  const { phone } = useLocalSearchParams<{ phone: string }>();
   const [digits, setDigits] = useState(['', '', '', '', '', '']);
   const [countdown, setCountdown] = useState(RESEND_SECS);
   const [canResend, setCanResend] = useState(false);
@@ -75,20 +75,14 @@ export default function OtpScreen() {
       await setTokens(accessToken, refreshToken);
       setNewUser(isNewUser);
 
-      const me = await authService.getMe();
-      setUser(me.data.data);
-      const role = me.data.data?.role;
-
-      Toast.show({
-        type: 'success',
-        text1: 'Logged In Successfully',
-        text2: 'Welcome to BhookhMarket!',
-      });
-
-      if (role === 'PARTNER') {
-        router.replace('/(partner)/dashboard' as any);
+      if (isNewUser) {
+        router.replace('/(auth)/location' as any);
       } else {
-        router.replace('/(consumer)/(tabs)');
+        const me = await authService.getMe();
+        setUser(me.data.data);
+        const role = me.data.data?.role;
+        if (role === 'PARTNER') router.replace('/(partner)/dashboard' as any);
+        else router.replace('/(consumer)/(tabs)');
       }
     } catch (e: any) {
       Toast.show({ type: 'error', text1: 'Verification failed', text2: e?.response?.data?.error ?? 'Invalid OTP.' });
@@ -115,13 +109,6 @@ export default function OtpScreen() {
             Enter the 6-digit code sent to{'\n'}
             <Text style={s.phone}>+91 {phone}</Text>
           </Text>
-
-          {devOtp ? (
-            <View style={s.devHint}>
-              <Ionicons name="bug-outline" size={15} color={Colors.primary} />
-              <Text style={s.devTxt}>Development OTP: {devOtp}</Text>
-            </View>
-          ) : null}
 
           {/* OTP boxes */}
           <View style={s.boxRow}>

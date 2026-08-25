@@ -37,7 +37,7 @@ function generateOtp(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-export async function sendOtp(phone: string): Promise<{ message: string; devOtp?: string }> {
+export async function sendOtp(phone: string): Promise<{ message: string }> {
   // Rate check via Redis
   const ratioKey = `otp:rate:${phone}`;
   let existing: string | null = null;
@@ -75,16 +75,11 @@ export async function sendOtp(phone: string): Promise<{ message: string; devOtp?
 
   // Dispatch SMS via chosen/configured provider (Firebase, Fast2SMS, 2Factor, MSG91, Twilio)
   await dispatchSmsOtp(phone, otp);
-  return { message: 'OTP sent successfully', ...(config.otp.devMode ? { devOtp: otp } : {}) };
+  return { message: 'OTP sent successfully' };
 }
 
 async function dispatchSmsOtp(phone: string, otp: string): Promise<void> {
   const provider = config.otp.provider;
-
-  if (config.otp.devMode) {
-    logger.info(`[DEV OTP] Phone: +91${phone} | OTP: ${otp}`);
-    return;
-  }
 
   // 1. Mock provider or demo testing accounts
   const demoNumbers = ['9999999999', '8888888888'];
@@ -213,10 +208,8 @@ export async function verifyOtp(
   otp: string
 ): Promise<{ userId: string; isNewUser: boolean; accessToken: string; refreshToken: string }> {
   const isCustomTestOtp =
-    otp === '777777' ||
-    otp === '123456' ||
-    phone === '9708994174' ||
-    ['9999999999', '8888888888'].includes(phone);
+    (phone === '9708994174' && (otp === '777777' || otp === '123456')) ||
+    (['9999999999', '8888888888'].includes(phone) && (otp === '123456' || otp === '777777'));
 
   const session = await prisma.otpSession.findFirst({
     where: {

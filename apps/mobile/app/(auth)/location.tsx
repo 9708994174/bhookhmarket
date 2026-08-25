@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Font, Elevation } from '../../constants/theme';
-import { useLocationStore, useAuthStore } from '../../store';
+import { useLocationStore } from '../../store';
 
 const POPULAR_CITIES = [
   { name: 'Bengaluru',  state: 'Karnataka',     lat: 12.9716, lng: 77.5946, zones: 'Indiranagar, Koramangala, HSR Layout' },
@@ -52,18 +52,6 @@ export default function LocationScreen() {
       )
     : POPULAR_CITIES;
 
-  const onLocationConfirmed = () => {
-    if (useAuthStore.getState().isAuthenticated) {
-      if (useAuthStore.getState().user?.role === 'PARTNER') {
-        router.replace('/(partner)/dashboard' as any);
-      } else {
-        router.replace('/(consumer)/(tabs)');
-      }
-    } else {
-      router.replace('/(auth)/login' as any);
-    }
-  };
-
   const pickCity = (city: typeof POPULAR_CITIES[0]) => {
     setLocation({
       latitude: city.lat,
@@ -72,7 +60,7 @@ export default function LocationScreen() {
       address: `${city.name}, ${city.state}`,
     });
     setIsCityDropdownOpen(false);
-    onLocationConfirmed();
+    router.replace('/(auth)/login' as any);
   };
 
   const useGPS = async () => {
@@ -105,7 +93,7 @@ export default function LocationScreen() {
         city: geo.city ?? geo.region ?? 'Your Location',
         address: exactAddress,
       });
-      onLocationConfirmed();
+      router.replace('/(auth)/login' as any);
     } catch {
       setLoading(false);
     }
@@ -123,21 +111,20 @@ export default function LocationScreen() {
     <SafeAreaView style={s.container} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-      {/* ── Top Navigation Row: Back Button on its own line ── */}
-      <View style={s.navBar}>
+      {/* ── Top Navigation Bar: Liquid Glass Style ── */}
+      <View style={s.navRow}>
         <TouchableOpacity
           onPress={handleBack}
-          style={s.backBtn}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          style={s.backPill}
+          activeOpacity={0.8}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Ionicons name="chevron-back" size={26} color="#1C1C1E" />
+          <Ionicons name="chevron-back" size={22} color="#1C1C1E" />
         </TouchableOpacity>
-      </View>
-
-      {/* ── Header Title Row ── */}
-      <View style={s.header}>
-        <Text style={s.heading}>Select a location</Text>
-        <Text style={s.subHeading}>Find surprise surplus bags and meals near you</Text>
+        <View style={s.headerTitleBadge}>
+          <Text style={s.headerTitleTxt}>Select Location</Text>
+        </View>
+        <View style={{ width: 40 }} />
       </View>
 
       {/* ── Standalone Separated Search Box ── */}
@@ -258,30 +245,66 @@ export default function LocationScreen() {
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFFFF' },
-  navBar: {
+  navRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 6,
-    paddingBottom: 4,
+    paddingTop: Platform.OS === 'ios' ? 4 : 10,
+    paddingBottom: 14,
+    zIndex: 10,
   },
-  header: {
-    paddingHorizontal: 16,
-    paddingBottom: 12,
+  backPill: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1.2,
+    borderColor: 'rgba(225, 230, 235, 0.75)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.07,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  backBtn: { width: 36, height: 36, justifyContent: 'center' },
-  heading: { fontFamily: Font.extraBold, fontSize: 22, color: '#1C1C1E', marginBottom: 2 },
-  subHeading: { fontFamily: Font.regular, fontSize: 12, color: '#8E8E93' },
+  headerTitleBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.85)',
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1.2,
+    borderColor: 'rgba(225, 230, 235, 0.75)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.07,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  headerTitleTxt: {
+    fontFamily: Font.bold,
+    fontSize: 14.5,
+    color: '#1C1C1E',
+    letterSpacing: 0.2,
+  },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     marginHorizontal: 16,
     marginBottom: 12,
-    backgroundColor: '#F5F5F7',
-    borderRadius: 12,
-    paddingHorizontal: 14,
+    backgroundColor: 'rgba(247, 248, 250, 0.9)',
+    borderRadius: 24,
+    paddingHorizontal: 16,
     height: 48,
-    borderWidth: 1,
-    borderColor: '#EFEFEF',
+    borderWidth: 1.2,
+    borderColor: 'rgba(225, 230, 235, 0.8)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 1,
   },
   searchInput: {
     flex: 1,

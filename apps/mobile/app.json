@@ -8,9 +8,9 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/logo.png",
+      "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#FFFFFF"
+      "backgroundColor": "#0B4D26"
     },
     "plugins": [
       "expo-router"
@@ -27,7 +27,7 @@
       "package": "com.bhookhmarket.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundColor": "#FFFFFF"
+        "backgroundColor": "#0B4D26"
       }
     },
     "web": {

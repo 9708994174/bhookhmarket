@@ -29,25 +29,24 @@ WebBrowser.maybeCompleteAuthSession();
 
 const { width } = Dimensions.get('window');
 
-// ── Official Multi-Color Google G Icon ─────────────────────────────────────
 function GoogleColorIcon({ size = 20 }: { size?: number }) {
   return (
-    <Svg width={size} height={size} viewBox="0 0 48 48">
-      <Path
-        fill="#EA4335"
-        d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"
-      />
+    <Svg width={size} height={size} viewBox="0 0 24 24">
       <Path
         fill="#4285F4"
-        d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"
-      />
-      <Path
-        fill="#FBBC05"
-        d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"
+        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
       />
       <Path
         fill="#34A853"
-        d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
+        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+      />
+      <Path
+        fill="#FBBC05"
+        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+      />
+      <Path
+        fill="#EA4335"
+        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
       />
     </Svg>
   );
@@ -58,45 +57,41 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
-  const { setTokens } = useAuthStore();
+  const { setTokens, setUser } = useAuthStore();
 
-  const [googleRequest, googleResponse, promptGoogleAsync] = Google.useAuthRequest({
-    webClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || '734086635945-saltkn02ankpjkiabled4b3dh7p7vsq8.apps.googleusercontent.com',
-    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || '734086635945-saltkn02ankpjkiabled4b3dh7p7vsq8.apps.googleusercontent.com',
-    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || '734086635945-saltkn02ankpjkiabled4b3dh7p7vsq8.apps.googleusercontent.com',
+  const [_req, googleRes, promptGoogleAsync] = Google.useAuthRequest({
+    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || 'dummy-android-client-id.apps.googleusercontent.com',
+    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || 'dummy-ios-client-id.apps.googleusercontent.com',
+    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || 'dummy-web-client-id.apps.googleusercontent.com',
   });
 
   useEffect(() => {
-    if (googleResponse?.type === 'success') {
-      const { authentication, params } = googleResponse;
-      const idToken = authentication?.idToken || (params as any)?.id_token;
-      if (idToken) {
-        handleGoogleLogin(idToken);
+    if (googleRes?.type === 'success') {
+      const { authentication } = googleRes;
+      if (authentication?.idToken || authentication?.accessToken) {
+        handleGoogleSignIn(authentication.idToken || authentication.accessToken);
       }
     }
-  }, [googleResponse]);
+  }, [googleRes]);
 
-  const handleGoogleLogin = async (idToken: string) => {
+  const handleGoogleSignIn = async (token: string) => {
     setGoogleLoading(true);
     try {
-      const res = await authService.googleAuth(idToken);
-      const { accessToken, refreshToken, isNewUser } = res.data.data;
+      const res = await authService.googleAuth(token);
+      const { accessToken, refreshToken, user } = res.data.data;
       await setTokens(accessToken, refreshToken);
+      setUser(user);
       Toast.show({
         type: 'success',
-        text1: 'Signed in with Google',
-        text2: 'Welcome to BhookhMarket!',
+        text1: `Welcome ${user.name ?? ''}!`,
+        text2: 'Signed in successfully.',
       });
-      if (isNewUser) {
-        router.replace('/(auth)/location' as any);
-      } else {
-        router.replace('/(consumer)/(tabs)');
-      }
-    } catch (err: any) {
+      router.replace((user.role === 'PARTNER' ? '/(partner)/dashboard' : '/(consumer)/discover') as any);
+    } catch (e: any) {
       Toast.show({
         type: 'error',
-        text1: 'Google Sign-In failed',
-        text2: err?.response?.data?.error ?? 'Could not authenticate with Google.',
+        text1: 'Google Sign In failed',
+        text2: e?.response?.data?.error ?? 'Please try again with phone number.',
       });
     } finally {
       setGoogleLoading(false);
@@ -110,19 +105,19 @@ export default function LoginScreen() {
       Toast.show({
         type: 'error',
         text1: 'Invalid mobile number',
-        text2: 'Please enter a valid 10-digit Indian phone number.',
+        text2: 'Please enter a valid 10-digit Indian mobile number.',
       });
       return;
     }
     setLoading(true);
     try {
-      const response = await authService.sendOtp(phone);
-      router.push({ pathname: '/(auth)/otp', params: { phone, devOtp: response.data.devOtp } });
+      await authService.sendOtp(phone);
+      router.push({ pathname: '/(auth)/otp', params: { phone } });
     } catch (e: any) {
       Toast.show({
         type: 'error',
-        text1: 'Failed to send OTP',
-        text2: e?.response?.data?.error ?? 'Please check your connection and try again.',
+        text1: 'Could not send OTP',
+        text2: e?.response?.data?.error ?? 'Please try again.',
       });
     } finally {
       setLoading(false);
@@ -281,9 +276,11 @@ export default function LoginScreen() {
                   onPress={() => router.push('/(auth)/partner-onboarding')}
                   activeOpacity={0.85}
                 >
-                  <View style={s.storeIconBox}>
-                    <Ionicons name="storefront" size={20} color="#0B4D26" />
-                  </View>
+                  <Image
+                    source={require('../../assets/store_badge.jpg')}
+                    style={s.storeHouseImg}
+                    resizeMode="cover"
+                  />
                   <View style={s.partnerInfo}>
                     <Text style={s.partnerTitle}>Are you a restaurant or store?</Text>
                     <Text style={s.partnerAction}>Partner with us</Text>
@@ -428,51 +425,31 @@ const s = StyleSheet.create({
   },
   kickerTxt: {
     fontFamily: Font.extraBold,
-    fontSize: 10.5,
-    letterSpacing: 1.4,
+    fontSize: 11,
     color: '#0B4D26',
-    textAlign: 'center',
-  },
-  googleIconBox: {
-    width: 22,
-    height: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  heading: {
-    fontFamily: Font.extraBold,
-    fontSize: 21,
-    color: '#1C1C1E',
-    textAlign: 'center',
-    marginBottom: 6,
-  },
-  sub: {
-    fontFamily: Font.regular,
-    fontSize: 13,
-    color: '#636366',
-    textAlign: 'center',
-    lineHeight: 18,
-    marginBottom: 20,
+    letterSpacing: 1.8,
+    marginTop: 2,
   },
   inputPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E5E5EA',
+    backgroundColor: '#F5F5F7',
     borderRadius: 14,
-    paddingHorizontal: 12,
-    height: 52,
-    backgroundColor: '#FFFFFF',
+    height: 48,
+    paddingHorizontal: 14,
+    borderWidth: 1.5,
+    borderColor: '#E5E5EA',
     marginBottom: 14,
   },
   inputPillFocused: {
     borderColor: '#0B4D26',
+    backgroundColor: '#FFFFFF',
   },
   prefixBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingRight: 10,
+    gap: 4,
+    paddingRight: 8,
   },
   prefixTxt: {
     fontFamily: Font.bold,
@@ -481,8 +458,8 @@ const s = StyleSheet.create({
   },
   inputDivider: {
     width: 1,
-    height: 22,
-    backgroundColor: '#E5E5EA',
+    height: 20,
+    backgroundColor: '#D1D1D6',
     marginRight: 10,
   },
   phoneInput: {
@@ -491,28 +468,36 @@ const s = StyleSheet.create({
     fontSize: 15,
     color: '#1C1C1E',
     height: '100%',
-    letterSpacing: 0.5,
   },
   continueBtn: {
+    backgroundColor: '#0B4D26',
+    borderRadius: 26,
+    height: 52,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#0B4D26',
-    borderRadius: 14,
-    height: 52,
-    paddingHorizontal: 10,
-    marginBottom: 14,
-  },
-  continueBtnDisabled: {
-    backgroundColor: '#8FA899',
+    paddingLeft: 18,
+    paddingRight: 9,
+    shadowColor: '#0B4D26',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.28,
+    shadowRadius: 8,
+    elevation: 4,
   },
   continueBtnLoading: {
     justifyContent: 'center',
+    paddingHorizontal: 18,
+  },
+  continueBtnDisabled: {
+    backgroundColor: '#A8C5B2',
+    shadowOpacity: 0,
+    elevation: 0,
   },
   continueTxt: {
     fontFamily: Font.bold,
-    fontSize: 15.5,
+    fontSize: 15,
     color: '#FFFFFF',
+    letterSpacing: 0.2,
   },
   arrowCircle: {
     width: 34,
@@ -525,84 +510,86 @@ const s = StyleSheet.create({
   orRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 10,
+    marginVertical: 14,
+    gap: 12,
   },
   orLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#EBEBEB',
+    backgroundColor: '#E5E5EA',
   },
   orTxt: {
-    fontFamily: Font.bold,
-    fontSize: 11,
+    fontFamily: Font.semiBold,
+    fontSize: 12,
     color: '#8E8E93',
-    paddingHorizontal: 12,
-    letterSpacing: 0.5,
   },
   googleBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#E5E5EA',
-    borderRadius: 14,
-    height: 48,
+    justifyContent: 'space-between',
     backgroundColor: '#FFFFFF',
-    gap: 10,
+    borderRadius: 25,
+    height: 50,
+    paddingHorizontal: 16,
+    borderWidth: 1.2,
+    borderColor: '#E5E5EA',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
     marginBottom: 14,
+  },
+  googleIconBox: {
+    width: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   googleTxt: {
     fontFamily: Font.semiBold,
-    fontSize: 14,
+    fontSize: 15,
     color: '#1C1C1E',
   },
   partnerCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F3F7F2',
-    borderRadius: 14,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    backgroundColor: 'rgba(11, 77, 38, 0.06)',
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
     gap: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(11, 77, 38, 0.12)',
     marginBottom: 16,
   },
-  storeIconBox: {
+  storeHouseImg: {
     width: 44,
     height: 44,
-    borderRadius: 10,
-    backgroundColor: '#E8F5E9',
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  storeIconImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
+    borderRadius: 12,
   },
   partnerInfo: {
     flex: 1,
   },
   partnerTitle: {
-    fontFamily: Font.regular,
-    fontSize: 12,
-    color: '#3C3C43',
+    fontFamily: Font.medium,
+    fontSize: 12.5,
+    color: '#3A3A3C',
   },
   partnerAction: {
     fontFamily: Font.bold,
-    fontSize: 13.5,
+    fontSize: 13,
     color: '#0B4D26',
     marginTop: 1,
   },
   terms: {
     fontFamily: Font.regular,
-    fontSize: 11,
-    color: '#636366',
+    fontSize: 11.5,
+    color: '#8E8E93',
     textAlign: 'center',
     lineHeight: 16,
   },
   termsLink: {
-    fontFamily: Font.bold,
+    fontFamily: Font.semiBold,
     color: '#0B4D26',
   },
 });

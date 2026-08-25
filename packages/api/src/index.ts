@@ -25,9 +25,9 @@ async function bootstrap() {
       logger.warn(`Redis warning: ${redisErr?.message || 'Redis unavailable'}`);
     }
 
-    // Start HTTP server on all interfaces (0.0.0.0)
-    const server = app.listen(config.port, '0.0.0.0', () => {
-      logger.info(`BhookhMarket API running on port ${config.port} on 0.0.0.0 in ${config.nodeEnv} mode`);
+    // Start HTTP server
+    const server = app.listen(config.port, () => {
+      logger.info(`BhookhMarket API running on port ${config.port} in ${config.nodeEnv} mode`);
       logger.info(`Health check available at http://localhost:${config.port}/health`);
     });
 

@@ -51,29 +51,12 @@ export default function OnboardingScreen() {
     }
   };
 
-  const handleBack = () => {
-    if (idx > 0) {
-      flatRef.current?.scrollToIndex({ index: idx - 1, animated: true });
-      setIdx(idx - 1);
-    } else {
-      router.replace('/(auth)/splash');
-    }
-  };
-
   return (
     <SafeAreaView style={s.container} edges={['top', 'bottom']}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-      {/* Top Header / Back & Skip Button */}
+      {/* Top Header / Skip Button */}
       <View style={s.topRow}>
-        <TouchableOpacity
-          onPress={handleBack}
-          style={s.backBtn}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="chevron-back" size={24} color="#1C1C1E" />
-        </TouchableOpacity>
         <TouchableOpacity
           onPress={() => router.push('/(auth)/location')}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
@@ -93,9 +76,9 @@ export default function OnboardingScreen() {
         onMomentumScrollEnd={(e) => setIdx(Math.round(e.nativeEvent.contentOffset.x / width))}
         renderItem={({ item }) => (
           <View style={s.slideContainer}>
-            {/* Center Illustration with Uniform Background */}
+            {/* Center Circular Frame Illustration */}
             <View style={s.imageWrapper}>
-              <Image source={item.image} style={s.slideImage} resizeMode="contain" />
+              <Image source={item.image} style={s.slideImage} resizeMode="cover" />
             </View>
 
             {/* Structured Text Area with Increased Size */}
@@ -140,19 +123,12 @@ const s = StyleSheet.create({
   },
   topRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingTop: 8,
     paddingBottom: 4,
     backgroundColor: '#FFFFFF',
-  },
-  backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   skip: {
     fontFamily: Font.semiBold,
