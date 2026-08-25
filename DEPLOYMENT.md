@@ -21,8 +21,8 @@ BhookhMarket Monorepo (Turborepo)
 1. Push to GitHub
 2. Create a new Render Web Service
 3. Set:
-    - Build Command: `npm install && npx prisma generate --schema packages/database/prisma/schema.prisma && npm run build --workspace @bhookhmarket/shared && npm run build --workspace @bhookhmarket/api`
-    - Start Command: `node packages/api/dist/api/src/index.js`
+    - Build Command: `npm install && npx prisma generate --schema packages/database/prisma/schema.prisma && npm run build --workspace @bhookhmarket/api`
+    - Start Command: `node packages/api/dist/index.js` (or `node packages/api/dist/api/src/index.js`)
 4. Add a Render Postgres database (or connect Supabase/Neon)
 5. Add Redis (Upstash is suitable for the free tier)
 

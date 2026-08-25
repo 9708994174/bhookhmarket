@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
-    "build": "npm run build --workspace @bhookhmarket/shared && tsc --build",
+    "build": "npm run build --workspace @bhookhmarket/shared && tsc --build && node -e \"const fs=require('fs'); fs.mkdirSync('dist/api/src',{recursive:true}); fs.writeFileSync('dist/api/src/index.js','require(\\\"../../index.js\\\");'); fs.mkdirSync('dist/src',{recursive:true}); fs.writeFileSync('dist/src/index.js','require(\\\"../index.js\\\");');\"",
     "start": "node dist/index.js",
     "test": "jest",
     "lint": "eslint src/**/*.ts"

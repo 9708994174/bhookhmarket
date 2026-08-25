@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",
+    "start": "node packages/api/dist/index.js",
     "lint": "turbo run lint",
     "test": "turbo run test",
     "db:generate": "cd packages/database && npx prisma generate",
