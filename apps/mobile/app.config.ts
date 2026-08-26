@@ -11,10 +11,10 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     slug: 'bhookhmarket',
     version: '1.0.0',
     orientation: 'portrait',
-    icon: './assets/icon.png',
+    icon: './assets/app-icon.png',
     userInterfaceStyle: 'light',
     splash: {
-      image: './assets/splash-icon.png',
+      image: './assets/app-icon.png',
       resizeMode: 'contain',
       backgroundColor: '#FFFFFF',
     },
@@ -22,7 +22,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ios: {
       supportsTablet: false,
       bundleIdentifier: 'com.bhookhmarket.app',
-      icon: './assets/icon.png',
+      icon: './assets/app-icon.png',
       infoPlist: {
         NSLocalNetworkUsageDescription:
           'BhookhMarket connects to the local API during development.',
@@ -41,7 +41,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         backgroundImage: './assets/android-icon-background.png',
         backgroundColor: '#FFFFFF',
       },
-      icon: './assets/icon.png',
+      icon: './assets/app-icon.png',
       package: 'com.bhookhmarket.app',
       config: {
         googleMaps: {
