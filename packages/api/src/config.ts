@@ -3,13 +3,16 @@ dotenv.config();
 
 function requireEnv(key: string, fallback?: string): string {
   const val = process.env[key];
-  if (!val && fallback === undefined) {
+  if (!val) {
+    if (fallback !== undefined) return fallback;
     if (process.env.NODE_ENV === 'production') {
-      throw new Error(`Missing required environment variable: ${key}`);
+      // Warn but don't crash — missing optional vars shouldn't kill the server
+      console.warn(`[CONFIG] Warning: Missing env var "${key}". Some features may be disabled.`);
+      return '';
     }
     return '';
   }
-  return val ?? fallback ?? '';
+  return val;
 }
 
 function parseOrigins(value: string): string[] {
@@ -19,6 +22,7 @@ function parseOrigins(value: string): string[] {
     .filter(Boolean);
 }
 
+// Allow any mobile/Expo client origin in production (mobile apps don't send Origin header)
 const configuredOrigins = process.env.CORS_ORIGINS ?? process.env.ALLOWED_ORIGINS;
 
 export const config = {
@@ -27,7 +31,10 @@ export const config = {
   port: parseInt(process.env.PORT ?? '3000', 10),
   isDev: process.env.NODE_ENV !== 'production',
 
-  allowedOrigins: parseOrigins(configuredOrigins ?? 'http://localhost:3000,http://localhost:8081'),
+  allowedOrigins: parseOrigins(
+    configuredOrigins ??
+    'http://localhost:3000,http://localhost:8081,exp://localhost:8081'
+  ),
 
   rateLimit: {
     windowMs: 15 * 60 * 1000,
@@ -41,11 +48,15 @@ export const config = {
   },
 
   database: {
-    url: requireEnv('DATABASE_URL', 'postgresql://bhookhmarket:password@localhost:5432/bhookhmarket?schema=public'),
+    url: requireEnv(
+      'DATABASE_URL',
+      'postgresql://bhookhmarket:password@localhost:5432/bhookhmarket?schema=public'
+    ),
   },
 
   redis: {
-    url: requireEnv('REDIS_URL', 'redis://localhost:6379'),
+    // Default to a dummy URL that will fail gracefully (no localhost Redis on Render)
+    url: process.env.REDIS_URL ?? '',
   },
 
   jwt: {
@@ -57,27 +68,42 @@ export const config = {
   },
 
   otp: {
-    provider: (process.env.OTP_PROVIDER ?? 'auto') as 'auto' | 'firebase' | 'fast2sms' | '2factor' | 'twilio' | 'msg91' | 'mock',
+    /**
+     * Provider priority (auto mode):
+     *   fast2sms → msg91 → 2factor → twilio → console log
+     * Set OTP_PROVIDER to a specific provider name to skip auto-detection.
+     * Set OTP_PROVIDER=mock for local development (no real SMS sent).
+     */
+    provider: (process.env.OTP_PROVIDER ?? 'auto') as
+      | 'auto'
+      | 'fast2sms'
+      | 'msg91'
+      | '2factor'
+      | 'twilio'
+      | 'mock',
+
+    /**
+     * When true, the OTP code is always logged to the console regardless of provider.
+     * Useful for development/testing. Never set to true in production for real users.
+     */
     devMode: process.env.OTP_DEV_MODE === 'true',
-    otpExpiryMinutes: 10,
 
-    // Firebase Phone Auth (10,000 free verifications/month)
-    firebaseApiKey: process.env.FIREBASE_API_KEY ?? '',
+    otpExpiryMinutes: parseInt(process.env.OTP_EXPIRY_MINUTES ?? '10', 10),
 
-    // Fast2SMS (Free trial credits in India)
+    // Fast2SMS (free Indian SMS — recommended for India-first apps)
     fast2smsApiKey: process.env.FAST2SMS_API_KEY ?? '',
 
-    // 2Factor (Free trial credits in India)
+    // 2Factor (Indian SMS gateway)
     twoFactorApiKey: process.env.TWOFACTOR_API_KEY ?? '',
 
-    // Twilio
+    // Twilio (global SMS)
     twilioAccountSid: process.env.TWILIO_ACCOUNT_SID ?? '',
     twilioAuthToken: process.env.TWILIO_AUTH_TOKEN ?? '',
     twilioFromNumber: process.env.TWILIO_PHONE_NUMBER ?? '',
 
-    // MSG91
+    // MSG91 (Indian SMS gateway)
     msg91AuthKey: process.env.MSG91_AUTH_KEY ?? '',
-    msg91SenderId: process.env.MSG91_SENDER_ID ?? 'BHMRKT',
+    msg91SenderId: process.env.MSG91_SENDER_ID ?? 'BHOOKHM',
     msg91TemplateId: process.env.MSG91_TEMPLATE_ID ?? '',
   },
 
@@ -91,10 +117,13 @@ export const config = {
     webhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET ?? '',
   },
 
+  // Firebase Admin SDK — used for push notifications (FCM) only
+  // NOT used for OTP SMS dispatch
   firebase: {
     projectId: process.env.FIREBASE_PROJECT_ID ?? '',
     clientEmail: process.env.FIREBASE_CLIENT_EMAIL ?? '',
     privateKey: (process.env.FIREBASE_PRIVATE_KEY ?? '').replace(/\\n/g, '\n'),
+    apiKey: process.env.FIREBASE_API_KEY ?? '', // kept for reference only
   },
 
   cloudinary: {
@@ -104,26 +133,49 @@ export const config = {
   },
 
   cors: {
-    origins: parseOrigins(configuredOrigins ?? 'http://localhost:3000,http://localhost:8081'),
+    origins: parseOrigins(
+      configuredOrigins ??
+      'http://localhost:3000,http://localhost:8081,exp://localhost:8081'
+    ),
   },
 };
 
+// ---- Production config validation ----
 if (config.nodeEnv === 'production') {
-  const requiredProductionVariables = [
-    'DATABASE_URL',
-    'JWT_SECRET',
-  ];
-  const missing = requiredProductionVariables.filter((key) => !process.env[key]);
+  const missing: string[] = [];
+
+  if (!process.env.DATABASE_URL) missing.push('DATABASE_URL');
+  if (!process.env.JWT_SECRET) missing.push('JWT_SECRET');
+  if (!process.env.JWT_REFRESH_SECRET) missing.push('JWT_REFRESH_SECRET');
+
   if (missing.length > 0) {
-    console.warn(`[CONFIG WARNING] Missing recommended production environment variables: ${missing.join(', ')}`);
+    console.error(`[CONFIG] CRITICAL: Missing required production env vars: ${missing.join(', ')}`);
+    // Don't crash — let the first DB query fail with a clear error
   }
+
+  // Warn if Redis is not configured (rate limiting will be disabled)
+  if (!process.env.REDIS_URL) {
+    console.warn(
+      '[CONFIG] REDIS_URL not set. OTP rate limiting is disabled. ' +
+      'Add a free Upstash Redis URL in the Render dashboard to enable it.'
+    );
+  }
+
+  // Warn if no SMS provider is configured
+  const hasOtpProvider =
+    config.otp.fast2smsApiKey ||
+    (config.otp.msg91AuthKey && config.otp.msg91TemplateId) ||
+    config.otp.twoFactorApiKey ||
+    (config.otp.twilioAccountSid && config.otp.twilioAuthToken);
+
+  if (!hasOtpProvider && config.otp.provider !== 'mock') {
+    console.warn(
+      '[CONFIG] No SMS provider credentials found. OTP codes will only appear in server logs. ' +
+      'Set FAST2SMS_API_KEY (recommended) or MSG91_AUTH_KEY + MSG91_TEMPLATE_ID in Render dashboard.'
+    );
+  }
+
   if (config.otp.devMode) {
-    console.warn('[CONFIG WARNING] OTP_DEV_MODE is enabled in production mode.');
-  }
-  const otpProvider = config.otp.provider;
-  const missingOtpProvider =
-    otpProvider === 'msg91' && (!config.otp.msg91AuthKey || !config.otp.msg91TemplateId);
-  if (otpProvider === 'auto' || missingOtpProvider) {
-    console.warn('[CONFIG WARNING] OTP_PROVIDER credentials not fully configured, defaulting to auto/dev verification.');
+    console.warn('[CONFIG] OTP_DEV_MODE=true in production. OTP codes will be visible in logs.');
   }
 }

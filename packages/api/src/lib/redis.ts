@@ -2,41 +2,66 @@ import { Redis } from 'ioredis';
 import { config } from '../config';
 import { logger } from '../utils/logger';
 
-export const redis = new Redis(config.redis.url, {
+// Use a placeholder URL if REDIS_URL is not set — initRedis() returns false early in this case
+const REDIS_URL = config.redis.url || 'redis://localhost:6379';
+
+export const redis = new Redis(REDIS_URL, {
   maxRetriesPerRequest: 1,
   lazyConnect: true,
   enableOfflineQueue: false,
+  connectTimeout: 5000,
+  commandTimeout: 3000,
   retryStrategy(times) {
-    if (times > 2) return null;
-    return 1000;
+    if (times > 3) return null; // stop retrying after 3 attempts
+    return Math.min(times * 500, 2000);
   },
 });
 
 let isConnected = false;
 
 redis.on('error', (err) => {
+  if (isConnected) {
+    // Only log state change, not every repeated error
+    logger.warn(`[Redis] Connection lost: ${err.message}. Rate limiting disabled until reconnected.`);
+  }
   isConnected = false;
-  logger.warn(`Redis error: ${err.message}`);
 });
 
 redis.on('connect', () => {
   isConnected = true;
-  logger.info('Connected to Redis');
+  logger.info('[Redis] Connected successfully.');
+});
+
+redis.on('reconnecting', () => {
+  logger.info('[Redis] Reconnecting...');
 });
 
 export async function initRedis(): Promise<boolean> {
+  // No Redis URL configured — skip entirely (rate limiting will be disabled)
+  if (!config.redis.url) {
+    logger.warn('[Redis] REDIS_URL not set. Running without Redis. Rate limiting is disabled.');
+    return false;
+  }
   try {
-    if (redis.status === 'wait') {
+    if (redis.status === 'wait' || redis.status === 'close') {
       await redis.connect();
     }
     await redis.ping();
     isConnected = true;
+    logger.info('[Redis] Ping successful.');
     return true;
   } catch (err: any) {
     isConnected = false;
-    logger.warn(`Redis unavailable (${err?.message || 'connection failed'}). Running in fallback mode.`);
+    logger.warn(
+      `[Redis] Unavailable (${err?.message ?? 'connection failed'}). ` +
+      `Running without distributed rate limiting. Set REDIS_URL in Render dashboard to enable.`
+    );
     return false;
   }
+}
+
+export function isRedisConnected(): boolean {
+  return isConnected;
 }
 
 export async function getCache<T>(key: string): Promise<T | null> {

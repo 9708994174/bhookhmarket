@@ -59,11 +59,23 @@ app.get('/health', (_req, res) => {
 app.get('/ready', async (_req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
-    await redis.ping();
-    res.json({ status: 'ready', timestamp: new Date().toISOString() });
-  } catch {
-    res.status(503).json({ status: 'not_ready', timestamp: new Date().toISOString() });
+  } catch (dbErr: any) {
+    return res.status(503).json({
+      status: 'not_ready',
+      reason: 'database',
+      timestamp: new Date().toISOString(),
+    });
   }
+
+  let redisOk = false;
+  try {
+    await redis.ping();
+    redisOk = true;
+  } catch {
+    // Redis unavailable is non-fatal — app still functions
+  }
+
+  res.json({ status: 'ready', redis: redisOk, timestamp: new Date().toISOString() });
 });
 
 // ---- API Routes (Supporting both /api and /api/v1) ----

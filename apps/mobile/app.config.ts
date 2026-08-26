@@ -38,8 +38,10 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     android: {
       adaptiveIcon: {
         foregroundImage: './assets/android-icon-foreground.png',
-        backgroundColor: '#0B4D26',
+        backgroundImage: './assets/android-icon-background.png',
+        backgroundColor: '#FFFFFF',
       },
+      icon: './assets/icon.png',
       package: 'com.bhookhmarket.app',
       config: {
         googleMaps: {
@@ -80,11 +82,11 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       typedRoutes: true,
     },
     extra: {
-      apiUrl: process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000',
+      apiUrl: process.env.EXPO_PUBLIC_API_URL ?? 'https://bhookhmarket.onrender.com',
       googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ?? '',
       razorpayKeyId: process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID ?? '',
       eas: {
-        projectId: 'your-eas-project-id',
+        projectId: process.env.EAS_PROJECT_ID ?? '',
       },
     },
   };

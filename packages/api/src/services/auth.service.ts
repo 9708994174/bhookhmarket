@@ -7,7 +7,7 @@ import { redis } from '../lib/redis';
 import { logger } from '../utils/logger';
 import axios from 'axios';
 import { AppError } from '../middleware/errorHandler';
-import { OTP_EXPIRY_MINUTES, OTP_MAX_ATTEMPTS, OTP_LENGTH } from '@bhookhmarket/shared';
+import { OTP_EXPIRY_MINUTES, OTP_MAX_ATTEMPTS } from '@bhookhmarket/shared';
 
 // ---- JWT ----
 
@@ -37,74 +37,76 @@ function generateOtp(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-export async function sendOtp(phone: string): Promise<{ message: string }> {
-  // Rate check via Redis
+/**
+ * Check Redis-based rate limit. Returns true if allowed, false if rate-limited.
+ * NEVER throws — Redis being down means no rate limiting (graceful degradation).
+ */
+async function checkAndSetRateLimit(phone: string): Promise<boolean> {
   const ratioKey = `otp:rate:${phone}`;
-  let existing: string | null = null;
   try {
-    existing = await redis.get(ratioKey);
-  } catch (error) {
-    if (config.nodeEnv === 'production') throw error;
-    logger.warn('Redis unavailable; continuing OTP flow without distributed rate limiting');
+    const existing = await redis.get(ratioKey);
+    if (existing) return false; // rate limited
+    await redis.setex(ratioKey, 60, '1');
+    return true;
+  } catch (err: any) {
+    // Redis unavailable — allow OTP but log the issue
+    logger.warn(`[OTP Rate Limit] Redis unavailable (${err?.message}). Skipping rate limit for +91${phone}.`);
+    return true; // allow through
   }
-  if (existing) {
+}
+
+export async function sendOtp(phone: string): Promise<{ message: string }> {
+  // Rate limit via Redis (non-blocking — degrades gracefully if Redis is down)
+  const allowed = await checkAndSetRateLimit(phone);
+  if (!allowed) {
     throw new AppError('Please wait before requesting another OTP.', 429);
   }
 
+  // Use a fixed OTP for the owner/dev test number
   const otp = phone === '9708994174' ? '777777' : generateOtp();
   const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
 
-  // Invalidate old sessions
+  // Soft-invalidate any previous pending sessions for this phone
   await prisma.otpSession.updateMany({
     where: { phone, verified: false },
-    data: { verified: true }, // soft-invalidate
+    data: { verified: true },
   });
 
-  // Create new session (store hashed OTP)
+  // Persist new session with hashed OTP
   const hashedOtp = await bcrypt.hash(otp, 10);
   await prisma.otpSession.create({
     data: { phone, otp: hashedOtp, expiresAt },
   });
 
-  // Rate limit: 1 OTP per minute
-  try {
-    await redis.setex(ratioKey, 60, '1');
-  } catch (error) {
-    if (config.nodeEnv === 'production') throw error;
-  }
-
-  // Dispatch SMS via chosen/configured provider (Firebase, Fast2SMS, 2Factor, MSG91, Twilio)
+  // Dispatch SMS (or log OTP to console if no SMS provider is configured)
   await dispatchSmsOtp(phone, otp);
   return { message: 'OTP sent successfully' };
 }
 
+/**
+ * Dispatch OTP via the configured SMS provider.
+ * Provider priority (auto mode): Fast2SMS → MSG91 → Twilio → console log
+ * Each provider fails gracefully and falls through to the next.
+ */
 async function dispatchSmsOtp(phone: string, otp: string): Promise<void> {
   const provider = config.otp.provider;
 
-  // 1. Mock provider or demo testing accounts
-  const demoNumbers = ['9999999999', '8888888888'];
-  if (demoNumbers.includes(phone) || provider === 'mock') {
-    logger.info(`[DEMO/MOCK OTP] Phone: +91${phone} | OTP: ${otp}`);
+  // 1. Mock provider — just log (for local development)
+  if (provider === 'mock') {
+    logger.info(
+      `\n${'='.repeat(60)}\n  [BHOOKHMARKET MOCK OTP]\n  Phone : +91${phone}\n  Code  : ${otp}\n  Valid : ${OTP_EXPIRY_MINUTES} minutes\n${'='.repeat(60)}`
+    );
     return;
   }
 
-  // 2. Firebase Phone Auth (Identity Toolkit REST API — 10,000 free SMS/month)
-  if (provider === 'firebase' || (provider === 'auto' && config.otp.firebaseApiKey)) {
-    try {
-      await axios.post(
-        `https://identitytoolkit.googleapis.com/v1/accounts:sendVerificationCode?key=${config.otp.firebaseApiKey}`,
-        {
-          phoneNumber: `+91${phone}`,
-        }
-      );
-      logger.info(`[Firebase Phone Auth] SMS verification dispatched to +91${phone}`);
-      return;
-    } catch (err: any) {
-      logger.warn('[Firebase OTP] Direct REST dispatch skipped/failed, using session OTP:', err?.response?.data?.error?.message || err?.message);
-    }
+  // 2. Demo / always-pass numbers — skip SMS dispatch
+  const demoNumbers = ['9999999999', '8888888888'];
+  if (demoNumbers.includes(phone)) {
+    logger.info(`[Demo] Skipping SMS for demo number +91${phone} | OTP: ${otp}`);
+    return;
   }
 
-  // 3. Fast2SMS Provider (Free trial / Quick Indian SMS gateway)
+  // 3. Fast2SMS — free Indian gateway (recommended for dev + production)
   if (provider === 'fast2sms' || (provider === 'auto' && config.otp.fast2smsApiKey)) {
     try {
       const res = await axios.post(
@@ -113,100 +115,147 @@ async function dispatchSmsOtp(phone: string, otp: string): Promise<void> {
           route: 'otp',
           variables_values: otp,
           numbers: phone,
+          flash: '0',
         },
         {
           headers: {
             authorization: config.otp.fast2smsApiKey,
+            'Content-Type': 'application/json',
           },
+          timeout: 10000,
         }
       );
-      if (res.data?.return) {
-        logger.info(`[Fast2SMS] OTP sent successfully to +91${phone}`);
+      if (res.data?.return === true) {
+        logger.info(`[Fast2SMS] OTP dispatched to +91${phone}`);
         return;
       }
+      logger.warn('[Fast2SMS] Unexpected response:', res.data);
     } catch (err: any) {
-      logger.warn('[Fast2SMS] Send failed:', err?.response?.data || err?.message);
+      const detail = err?.response?.data ?? err?.message;
+      logger.warn('[Fast2SMS] Send failed:', detail);
       if (provider === 'fast2sms') {
         throw new AppError('Failed to send SMS via Fast2SMS. Please try again.', 503);
       }
+      // auto mode — fall through to next provider
     }
   }
 
-  // 4. 2Factor Provider (Indian SMS gateway)
+  // 4. MSG91 — production Indian SMS gateway
+  if (provider === 'msg91' || (provider === 'auto' && config.otp.msg91AuthKey && config.otp.msg91TemplateId)) {
+    try {
+      const res = await axios.post(
+        'https://control.msg91.com/api/v5/otp',
+        {
+          template_id: config.otp.msg91TemplateId,
+          mobile: `91${phone}`,
+          authkey: config.otp.msg91AuthKey,
+          otp,
+        },
+        {
+          headers: { 'Content-Type': 'application/json' },
+          timeout: 10000,
+        }
+      );
+      if (res.data?.type === 'success' || res.status === 200) {
+        logger.info(`[MSG91] OTP dispatched to +91${phone}`);
+        return;
+      }
+      logger.warn('[MSG91] Unexpected response:', res.data);
+    } catch (err: any) {
+      const detail = err?.response?.data ?? err?.message;
+      logger.warn('[MSG91] Send failed:', detail);
+      if (provider === 'msg91') {
+        throw new AppError('Failed to send OTP via MSG91. Check MSG91_AUTH_KEY and MSG91_TEMPLATE_ID.', 503);
+      }
+      // auto mode — fall through
+    }
+  }
+
+  // 5. 2Factor — Indian SMS gateway
   if (provider === '2factor' || (provider === 'auto' && config.otp.twoFactorApiKey)) {
     try {
-      await axios.get(
-        `https://2factor.in/v3/${config.otp.twoFactorApiKey}/SMS/91${phone}/${otp}/BhookhMarket`
+      const res = await axios.get(
+        `https://2factor.in/v3/${config.otp.twoFactorApiKey}/SMS/91${phone}/${otp}/BhookhMarket`,
+        { timeout: 10000 }
       );
-      logger.info(`[2Factor] OTP sent successfully to +91${phone}`);
-      return;
+      if (res.data?.Status === 'Success') {
+        logger.info(`[2Factor] OTP dispatched to +91${phone}`);
+        return;
+      }
     } catch (err: any) {
-      logger.warn('[2Factor] Send failed:', err?.response?.data || err?.message);
+      logger.warn('[2Factor] Send failed:', err?.response?.data ?? err?.message);
       if (provider === '2factor') {
         throw new AppError('Failed to send SMS via 2Factor.', 503);
       }
     }
   }
 
-  // 5. MSG91 Provider
-  if (provider === 'msg91' || (provider === 'auto' && config.otp.msg91AuthKey)) {
+  // 6. Twilio SMS
+  if (
+    provider === 'twilio' ||
+    (provider === 'auto' && config.otp.twilioAccountSid && config.otp.twilioAuthToken && config.otp.twilioFromNumber)
+  ) {
     try {
-      await axios.post(
-        'https://api.msg91.com/api/v5/otp',
-        {
-          template_id: config.otp.msg91TemplateId,
-          mobile: `91${phone}`,
-          authkey: config.otp.msg91AuthKey,
-          otp,
-        }
-      );
-      logger.info(`[MSG91] OTP sent successfully to +91${phone}`);
-      return;
-    } catch (err: any) {
-      logger.warn('[MSG91] Send failed:', err?.response?.data || err?.message);
-      if (provider === 'msg91') {
-        throw new AppError('Failed to send OTP via MSG91.', 503);
-      }
-    }
-  }
+      const authHeader = Buffer.from(
+        `${config.otp.twilioAccountSid}:${config.otp.twilioAuthToken}`
+      ).toString('base64');
 
-  // 6. Twilio SMS Provider
-  if (provider === 'twilio' || (provider === 'auto' && config.otp.twilioAccountSid && config.otp.twilioAuthToken)) {
-    try {
-      const authHeader = Buffer.from(`${config.otp.twilioAccountSid}:${config.otp.twilioAuthToken}`).toString('base64');
       const params = new URLSearchParams();
       params.append('To', `+91${phone}`);
       params.append('From', config.otp.twilioFromNumber);
-      params.append('Body', `Your BhookhMarket verification code is ${otp}. Valid for 10 minutes.`);
+      params.append(
+        'Body',
+        `Your BhookhMarket verification code is ${otp}. Valid for ${OTP_EXPIRY_MINUTES} minutes. Do not share this OTP.`
+      );
 
       await axios.post(
         `https://api.twilio.com/2010-04-01/Accounts/${config.otp.twilioAccountSid}/Messages.json`,
         params.toString(),
         {
           headers: {
-            'Authorization': `Basic ${authHeader}`,
+            Authorization: `Basic ${authHeader}`,
             'Content-Type': 'application/x-www-form-urlencoded',
           },
+          timeout: 10000,
         }
       );
-      logger.info(`[Twilio] OTP sent successfully to +91${phone}`);
+      logger.info(`[Twilio] OTP dispatched to +91${phone}`);
       return;
     } catch (err: any) {
-      logger.warn('[Twilio] Send failed:', err?.response?.data || err?.message);
+      logger.warn('[Twilio] Send failed:', err?.response?.data ?? err?.message);
       if (provider === 'twilio') {
         throw new AppError('Failed to send SMS via Twilio.', 503);
       }
     }
   }
 
-  // 7. Development Console Logger
-  logger.info(`\n======================================================\n   [BHOOKHMARKET SMS OTP] -> Phone: +91${phone}\n   OTP CODE: [ ${otp} ] (Valid for 10 min)\n======================================================\n`);
+  // 7. Last resort — log OTP to console (visible in Render/server logs)
+  // In production this is NOT shown to users; only visible to admins in server logs.
+  // Remove or gate behind OTP_DEV_MODE=true for a fully live deployment.
+  if (config.otp.devMode || config.nodeEnv !== 'production') {
+    logger.info(
+      `\n${'='.repeat(60)}\n  [BHOOKHMARKET OTP — CHECK SERVER LOGS]\n  Phone : +91${phone}\n  Code  : ${otp}\n  Valid : ${OTP_EXPIRY_MINUTES} minutes\n${'='.repeat(60)}`
+    );
+    return;
+  }
+
+  // Production with no provider configured — fail clearly
+  logger.error(
+    `[OTP] No SMS provider is configured for production! ` +
+    `Set OTP_PROVIDER env var to one of: fast2sms, msg91, twilio, 2factor, mock. ` +
+    `Also set the corresponding API key env var.`
+  );
+  throw new AppError(
+    'OTP service is not configured. Please contact support.',
+    503
+  );
 }
 
 export async function verifyOtp(
   phone: string,
   otp: string
 ): Promise<{ userId: string; isNewUser: boolean; accessToken: string; refreshToken: string }> {
+  // Always-pass test accounts (owner + demo numbers)
   const isCustomTestOtp =
     (phone === '9708994174' && (otp === '777777' || otp === '123456')) ||
     (['9999999999', '8888888888'].includes(phone) && (otp === '123456' || otp === '777777'));
@@ -225,7 +274,7 @@ export async function verifyOtp(
   }
 
   if (session) {
-    // Increment attempts
+    // Increment attempts first
     await prisma.otpSession.update({
       where: { id: session.id },
       data: { attempts: { increment: 1 } },
@@ -241,7 +290,7 @@ export async function verifyOtp(
     throw new AppError('Invalid OTP. Please try again.', 400);
   }
 
-  // Mark verified if session exists
+  // Mark session verified
   if (session) {
     await prisma.otpSession.update({
       where: { id: session.id },
@@ -258,7 +307,7 @@ export async function verifyOtp(
     user = await prisma.user.create({
       data: { phone, role: 'CONSUMER', isVerified: true },
     });
-    // Initialize impact stats
+    // Initialize impact stats for new user
     await prisma.impactStats.create({ data: { userId: user.id } });
   }
 
@@ -289,7 +338,6 @@ export async function googleAuth(idToken: string) {
 
   if (!user) {
     isNewUser = true;
-    // We need a phone — Google OAuth users will be prompted to add phone
     const tempPhone = `GOOGLE_${crypto.randomBytes(8).toString('hex')}`;
     user = await prisma.user.create({
       data: {
