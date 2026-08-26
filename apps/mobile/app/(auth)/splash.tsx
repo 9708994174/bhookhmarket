@@ -45,10 +45,9 @@ export default function SplashScreen() {
     <View style={s.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-      {/* Official Animated Brand Icon & Title */}
       <Animated.View
         style={[
-          s.contentWrap,
+          s.logoWrap,
           {
             opacity: logoOpacity,
             transform: [{ scale: logoScale }],
@@ -56,12 +55,10 @@ export default function SplashScreen() {
         ]}
       >
         <Image
-          source={require('../../assets/app-icon.png')}
-          style={s.appIcon}
+          source={require('../../assets/logo.png')}
+          style={s.logoImage}
           resizeMode="contain"
         />
-        <Animated.Text style={s.brandTitle}>BhookhMarket</Animated.Text>
-        <Animated.Text style={s.brandTagline}>RESCUE MORE. WASTE LESS.</Animated.Text>
       </Animated.View>
     </View>
   );
@@ -74,27 +71,14 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  contentWrap: {
+  logoWrap: {
+    width: width * 0.72,
+    height: 90,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  appIcon: {
-    width: 140,
-    height: 140,
-    borderRadius: 28,
-  },
-  brandTitle: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: '#0B4D26',
-    marginTop: 18,
-    letterSpacing: -0.5,
-  },
-  brandTagline: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#2E7D32',
-    marginTop: 6,
-    letterSpacing: 1.8,
+  logoImage: {
+    width: '100%',
+    height: '100%',
   },
 });
