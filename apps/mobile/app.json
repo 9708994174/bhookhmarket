@@ -10,7 +10,7 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0B4D26"
+      "backgroundColor": "#FFFFFF"
     },
     "plugins": [
       "expo-router"
@@ -27,7 +27,7 @@
       "package": "com.bhookhmarket.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundColor": "#0B4D26"
+        "backgroundColor": "#FFFFFF"
       }
     },
     "web": {
