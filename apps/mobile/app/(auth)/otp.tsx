@@ -22,7 +22,7 @@ import { useAuthStore } from '../../store';
 const RESEND_SECS = 30;
 
 export default function OtpScreen() {
-  const { phone } = useLocalSearchParams<{ phone: string }>();
+  const { phone, targetRole } = useLocalSearchParams<{ phone: string; targetRole?: string }>();
   const [digits, setDigits] = useState(['', '', '', '', '', '']);
   const [countdown, setCountdown] = useState(RESEND_SECS);
   const [canResend, setCanResend] = useState(false);
@@ -79,10 +79,17 @@ export default function OtpScreen() {
         router.replace('/(auth)/location' as any);
       } else {
         const me = await authService.getMe();
-        setUser(me.data.data);
-        const role = me.data.data?.role;
-        if (role === 'PARTNER') router.replace('/(partner)/dashboard' as any);
-        else router.replace('/(consumer)/(tabs)');
+        const userData = me.data.data;
+        setUser(userData);
+        
+        // Strict role routing: honor the flow where login was initiated
+        if (targetRole === 'CONSUMER') {
+          router.replace('/(consumer)/(tabs)');
+        } else if (targetRole === 'PARTNER' || userData?.role === 'PARTNER') {
+          router.replace('/(partner)/(tabs)' as any);
+        } else {
+          router.replace('/(consumer)/(tabs)');
+        }
       }
     } catch (e: any) {
       Toast.show({ type: 'error', text1: 'Verification failed', text2: e?.response?.data?.error ?? 'Invalid OTP.' });
@@ -94,70 +101,122 @@ export default function OtpScreen() {
   const complete = digits.every((d) => d !== '');
 
   return (
-    <SafeAreaView style={s.safe} edges={['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" backgroundColor={Colors.white} />
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-        <View style={s.content}>
-          {/* Back Button */}
-          <TouchableOpacity style={s.backBtn} onPress={() => router.back()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <Ionicons name="chevron-back" size={26} color="#1C1C1E" />
-          </TouchableOpacity>
-
-          {/* Heading */}
-          <Text style={s.heading}>Verify your number</Text>
-          <Text style={s.sub}>
-            Enter the 6-digit code sent to{'\n'}
-            <Text style={s.phone}>+91 {phone}</Text>
-          </Text>
-
-          {/* OTP boxes */}
-          <View style={s.boxRow}>
-            {digits.map((d, i) => (
-              <TextInput
-                key={i}
-                ref={(r) => {
-                  inputs.current[i] = r!;
-                }}
-                style={[s.box, d ? s.boxFilled : null]}
-                value={d}
-                onChangeText={(t) => onChange(t, i)}
-                onKeyPress={(e) => onKeyPress(e, i)}
-                keyboardType="number-pad"
-                maxLength={1}
-                selectTextOnFocus
-              />
-            ))}
-          </View>
-
-          {/* Verify CTA */}
+    <View style={s.root}>
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+      <SafeAreaView style={s.safe} edges={['top', 'bottom']}>
+        {/* Top Floating Glassmorphic Header */}
+        <View style={s.navRow}>
           <TouchableOpacity
-            style={[s.verifyBtn, (!complete || loading) && s.verifyOff]}
-            onPress={verify}
-            disabled={!complete || loading}
-            activeOpacity={0.9}
+            style={s.backPill}
+            onPress={() => router.back()}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            activeOpacity={0.8}
           >
-            <Text style={s.verifyTxt}>{loading ? 'Verifying...' : 'Verify & Continue'}</Text>
+            <Ionicons name="chevron-back" size={22} color="#0B4D26" />
           </TouchableOpacity>
-
-          {/* Resend */}
-          <View style={s.resendRow}>
-            <Text style={s.resendLabel}>Didn't receive the code? </Text>
-            <TouchableOpacity onPress={resend} disabled={!canResend}>
-              <Text style={[s.resendLink, !canResend && s.resendLinkOff]}>
-                {canResend ? 'Resend OTP' : `Resend in ${countdown}s`}
-              </Text>
-            </TouchableOpacity>
+          <View style={s.headerTitleBadge}>
+            <Text style={s.headerTitleTxt}>OTP Verification</Text>
           </View>
+          <View style={{ width: 40 }} />
         </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+          <View style={s.content}>
+            {/* Heading */}
+            <Text style={s.heading}>Verify your number</Text>
+            <Text style={s.sub}>
+              Enter the 6-digit code sent to{'\n'}
+              <Text style={s.phone}>+91 {phone}</Text>
+            </Text>
+
+            {/* OTP boxes */}
+            <View style={s.boxRow}>
+              {digits.map((d, i) => (
+                <TextInput
+                  key={i}
+                  ref={(r) => {
+                    inputs.current[i] = r!;
+                  }}
+                  style={[s.box, d ? s.boxFilled : null]}
+                  value={d}
+                  onChangeText={(t) => onChange(t, i)}
+                  onKeyPress={(e) => onKeyPress(e, i)}
+                  keyboardType="number-pad"
+                  maxLength={1}
+                  selectTextOnFocus
+                />
+              ))}
+            </View>
+
+            {/* Verify CTA */}
+            <TouchableOpacity
+              style={[s.verifyBtn, (!complete || loading) && s.verifyOff]}
+              onPress={verify}
+              disabled={!complete || loading}
+              activeOpacity={0.9}
+            >
+              <Text style={s.verifyTxt}>{loading ? 'Verifying...' : 'Verify & Continue'}</Text>
+            </TouchableOpacity>
+
+            {/* Resend */}
+            <View style={s.resendRow}>
+              <Text style={s.resendLabel}>Didn't receive the code? </Text>
+              <TouchableOpacity onPress={resend} disabled={!canResend}>
+                <Text style={[s.resendLink, !canResend && s.resendLinkOff]}>
+                  {canResend ? 'Resend OTP' : `Resend in ${countdown}s`}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.white },
-  content: { flex: 1, paddingHorizontal: Sp.xl, paddingTop: Sp.base },
-  backBtn: { width: 40, height: 40, justifyContent: 'center', marginBottom: Sp.lg },
+  root: { flex: 1, backgroundColor: '#F9FAF7' },
+  safe: { flex: 1 },
+  navRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === 'ios' ? 4 : 10,
+    paddingBottom: 8,
+    zIndex: 10,
+  },
+  backPill: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  headerTitleBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  headerTitleTxt: {
+    fontFamily: Font.bold,
+    fontSize: 14.5,
+    color: '#0B4D26',
+    letterSpacing: 0.2,
+  },
+  content: { flex: 1, paddingHorizontal: Sp.xl, paddingTop: Sp.lg },
   heading: { fontFamily: Font.extraBold, fontSize: Sz['2xl'], color: Colors.textPrimary, marginBottom: Sp.xs },
   sub: { fontFamily: Font.regular, fontSize: Sz.sm, color: Colors.textSecondary, lineHeight: 22, marginBottom: Sp['2xl'] },
   phone: { fontFamily: Font.bold, color: Colors.textPrimary },
@@ -172,21 +231,9 @@ const s = StyleSheet.create({
     fontFamily: Font.bold,
     fontSize: Sz.xl,
     color: Colors.textPrimary,
-    backgroundColor: Colors.surface,
+    backgroundColor: Colors.white,
   },
   boxFilled: { borderColor: Colors.primary, backgroundColor: Colors.primarySurface },
-  devHint: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    backgroundColor: Colors.primarySurface,
-    borderRadius: R.sm,
-    marginBottom: Sp.lg,
-  },
-  devTxt: { fontFamily: Font.medium, fontSize: Sz.xs, color: Colors.primary },
   verifyBtn: {
     backgroundColor: Colors.primary,
     borderRadius: R.lg,

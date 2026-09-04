@@ -59,7 +59,7 @@ export default function MapScreen() {
 
       <View style={s.mapCanvas}>
         <MapView
-          style={StyleSheet.absoluteFillObject}
+          style={StyleSheet.absoluteFill}
           initialRegion={{
             latitude: params.lat,
             longitude: params.lng,
@@ -223,7 +223,7 @@ const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#E8F5E9' },
   mapCanvas: { flex: 1, position: 'relative' },
   mapGrid: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: '#F2F7F2',
     opacity: 0.8,
   },
@@ -288,15 +288,15 @@ const s = StyleSheet.create({
     ...Elevation.md,
   },
   androidGlassBg: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(255, 255, 255, 0.88)',
   },
   glassOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(255, 255, 255, 0.35)',
   },
   searchInnerRow: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
@@ -320,7 +320,7 @@ const s = StyleSheet.create({
     color: '#1B5E20',
   },
   pinsLayer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   pinContainer: {
     position: 'absolute',

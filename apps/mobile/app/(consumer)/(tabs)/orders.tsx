@@ -8,6 +8,7 @@ import {
   RefreshControl,
   StatusBar,
   Image,
+  Platform,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
@@ -54,10 +55,12 @@ export default function OrdersScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor={Colors.white} />
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
 
-      <View style={s.header}>
-        <Text style={s.headerTitle}>Orders</Text>
+      <View style={s.navRow}>
+        <View style={s.headerTitleBadge}>
+          <Text style={s.headerTitleTxt}>Your Orders</Text>
+        </View>
       </View>
 
       {/* Tabs */}
@@ -175,25 +178,40 @@ export default function OrdersScreen() {
 
 const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.surface },
-  header: {
-    backgroundColor: Colors.white,
-    paddingHorizontal: Sp.xl,
-    paddingVertical: Sp.md,
+  navRow: {
     alignItems: 'center',
     justifyContent: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === 'ios' ? 6 : 12,
+    paddingBottom: 8,
+    backgroundColor: 'transparent',
   },
-  headerTitle: { fontFamily: Font.extraBold, fontSize: Sz.xl, color: Colors.textPrimary, textAlign: 'center' },
+  headerTitleBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    paddingHorizontal: 22,
+    paddingVertical: 8,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  headerTitleTxt: {
+    fontFamily: Font.bold,
+    fontSize: 15,
+    color: '#0B4D26',
+    letterSpacing: 0.2,
+  },
   tabRow: {
     flexDirection: 'row',
-    backgroundColor: Colors.white,
+    backgroundColor: 'transparent',
     paddingHorizontal: Sp.base,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
+    marginHorizontal: 16,
+    marginBottom: 4,
   },
-  tab: { flex: 1, paddingVertical: 12, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
-  tabActive: { borderBottomColor: Colors.primary },
+  tab: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 20, backgroundColor: 'transparent' },
+  tabActive: { backgroundColor: 'rgba(11, 77, 38, 0.1)' },
   tabTxt: { fontFamily: Font.medium, fontSize: Sz.sm, color: Colors.textSecondary },
   tabTxtActive: { fontFamily: Font.bold, color: Colors.primary },
   list: { padding: Sp.base, gap: Sp.base, paddingBottom: 40 },

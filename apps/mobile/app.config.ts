@@ -13,11 +13,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     orientation: 'portrait',
     icon: './assets/app-icon.png',
     userInterfaceStyle: 'light',
-    splash: {
-      image: './assets/app-icon.png',
-      resizeMode: 'contain',
-      backgroundColor: '#FFFFFF',
-    },
     assetBundlePatterns: ['**/*'],
     ios: {
       supportsTablet: false,
@@ -64,6 +59,16 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       'expo-router',
       'expo-font',
       'expo-secure-store',
+      [
+        'expo-splash-screen',
+        {
+          image: './assets/app-icon.png',
+          resizeMode: 'contain',
+          backgroundColor: '#FFFFFF',
+        },
+      ],
+      'expo-status-bar',
+      'expo-web-browser',
       [
         'expo-location',
         {

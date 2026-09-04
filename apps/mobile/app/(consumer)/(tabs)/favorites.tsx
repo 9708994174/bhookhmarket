@@ -8,6 +8,7 @@ import {
   Image,
   RefreshControl,
   StatusBar,
+  Platform,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -34,11 +35,13 @@ export default function FavoritesScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor={Colors.white} />
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
 
-      {/* Header */}
-      <View style={s.header}>
-        <Text style={s.headerTitle}>Favorites</Text>
+      {/* Floating Header */}
+      <View style={s.navRow}>
+        <View style={s.headerTitleBadge}>
+          <Text style={s.headerTitleTxt}>Saved Stores</Text>
+        </View>
       </View>
 
       {isLoading ? (
@@ -130,20 +133,30 @@ export default function FavoritesScreen() {
 
 const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.surface },
-  header: {
-    paddingHorizontal: Sp.xl,
-    paddingVertical: Sp.md,
-    backgroundColor: Colors.white,
+  navRow: {
     alignItems: 'center',
     justifyContent: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === 'ios' ? 6 : 12,
+    paddingBottom: 8,
+    backgroundColor: 'transparent',
   },
-  headerTitle: {
-    fontFamily: Font.extraBold,
-    fontSize: Sz.xl,
-    color: Colors.textPrimary,
-    textAlign: 'center',
+  headerTitleBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    paddingHorizontal: 22,
+    paddingVertical: 8,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  headerTitleTxt: {
+    fontFamily: Font.bold,
+    fontSize: 15,
+    color: '#0B4D26',
+    letterSpacing: 0.2,
   },
   list: { padding: Sp.base, gap: Sp.base, paddingBottom: 40 },
   card: {

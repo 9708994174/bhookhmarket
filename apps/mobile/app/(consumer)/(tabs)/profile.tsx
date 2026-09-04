@@ -321,11 +321,13 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
 
-      {/* ── Centered Header ── */}
-      <View style={s.header}>
-        <Text style={s.headerTitle}>Profile</Text>
+      {/* ── Floating Glassmorphic Header ── */}
+      <View style={s.navRow}>
+        <View style={s.headerTitleBadge}>
+          <Text style={s.headerTitleTxt}>Account Profile</Text>
+        </View>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.content}>
@@ -856,24 +858,34 @@ const s = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.white,
   },
-  header: {
-    paddingHorizontal: Sp.xl,
-    paddingVertical: Sp.md,
-    backgroundColor: Colors.white,
-    justifyContent: 'center',
+  navRow: {
     alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === 'ios' ? 6 : 12,
+    paddingBottom: 6,
+    backgroundColor: 'transparent',
   },
-  headerTitle: {
-    fontFamily: Font.extraBold,
-    fontSize: Sz.xl,
-    color: Colors.textPrimary,
-    textAlign: 'center',
+  headerTitleBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    paddingHorizontal: 22,
+    paddingVertical: 8,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  headerTitleTxt: {
+    fontFamily: Font.bold,
+    fontSize: 15,
+    color: '#0B4D26',
+    letterSpacing: 0.2,
   },
   content: {
     paddingHorizontal: Sp.base,
-    paddingTop: Sp.base,
+    paddingTop: Sp.sm,
     backgroundColor: Colors.surface,
   },
   userCard: {
@@ -910,7 +922,7 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarLoadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0, 0, 0, 0.45)',
     borderRadius: 31,
     alignItems: 'center',

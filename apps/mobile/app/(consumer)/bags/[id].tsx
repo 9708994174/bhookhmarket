@@ -424,7 +424,7 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   heroGradTop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     height: '50%',
   },
   heroGradBottom: {

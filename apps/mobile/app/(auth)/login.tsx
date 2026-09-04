@@ -112,7 +112,7 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       await authService.sendOtp(phone);
-      router.push({ pathname: '/(auth)/otp', params: { phone } });
+      router.push({ pathname: '/(auth)/otp', params: { phone, targetRole: 'CONSUMER' } });
     } catch (e: any) {
       Toast.show({
         type: 'error',

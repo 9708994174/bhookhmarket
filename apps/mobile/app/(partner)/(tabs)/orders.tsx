@@ -9,6 +9,7 @@ import {
   RefreshControl,
   StatusBar,
   Alert,
+  Platform,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
@@ -83,11 +84,13 @@ export default function PartnerOrdersScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
 
-      {/* ── Centered Header ── */}
-      <View style={s.header}>
-        <Text style={s.headerTitle}>Customer Pickups</Text>
+      {/* ── Floating Header ── */}
+      <View style={s.navRow}>
+        <View style={s.headerTitleBadge}>
+          <Text style={s.headerTitleTxt}>Customer Pickups</Text>
+        </View>
       </View>
 
       {/* ── Fast Pickup Verification Box ── */}
@@ -189,28 +192,41 @@ export default function PartnerOrdersScreen() {
 const s = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F8F9FA',
   },
-  header: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F2',
-    backgroundColor: '#FFFFFF',
+  navRow: {
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === 'ios' ? 6 : 12,
+    paddingBottom: 10,
+    backgroundColor: 'transparent',
   },
-  headerTitle: {
-    fontFamily: Font.extraBold,
-    fontSize: Sz.xl,
-    color: '#1C1C1E',
-    textAlign: 'center',
+  headerTitleBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    paddingHorizontal: 22,
+    paddingVertical: 8,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  headerTitleTxt: {
+    fontFamily: Font.bold,
+    fontSize: 15,
+    color: '#0B4D26',
+    letterSpacing: 0.2,
   },
   verifyBox: {
     backgroundColor: '#E8F5E9',
     padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#C8E6C9',
+    borderRadius: 20,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#C8E6C9',
   },
   verifyTitle: {
     fontFamily: Font.bold,

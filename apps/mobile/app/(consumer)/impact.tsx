@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Dimensions,
   StatusBar,
+  Platform,
 } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -22,15 +23,17 @@ export default function ImpactScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" backgroundColor={Colors.white} />
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
 
-      {/* Header */}
-      <View style={s.header}>
-        <TouchableOpacity onPress={() => router.back()} style={s.backBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Ionicons name="chevron-back" size={26} color="#1C1C1E" />
+      {/* Floating Header */}
+      <View style={s.navRow}>
+        <TouchableOpacity onPress={() => router.back()} style={s.backPill} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Ionicons name="chevron-back" size={22} color="#0B4D26" />
         </TouchableOpacity>
-        <Text style={s.headerTitle}>Environmental Impact</Text>
-        <View style={{ width: 24 }} />
+        <View style={s.headerTitleBadge}>
+          <Text style={s.headerTitleTxt}>Environmental Impact</Text>
+        </View>
+        <View style={{ width: 40 }} />
       </View>
 
       <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
@@ -109,17 +112,45 @@ export default function ImpactScreen() {
 
 const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.white },
-  header: {
+  navRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: Sp.base,
-    paddingVertical: Sp.md,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === 'ios' ? 6 : 12,
+    paddingBottom: 8,
+    backgroundColor: 'transparent',
   },
-  backBtn: { padding: 4 },
-  headerTitle: { fontFamily: Font.bold, fontSize: Sz.md, color: Colors.textPrimary },
+  backPill: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  headerTitleBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  headerTitleTxt: {
+    fontFamily: Font.bold,
+    fontSize: 14.5,
+    color: '#0B4D26',
+    letterSpacing: 0.2,
+  },
   content: { padding: Sp.base, gap: Sp.lg, alignItems: 'center' },
   illustContainer: {
     alignItems: 'center',

@@ -775,7 +775,7 @@ const s = StyleSheet.create({
     height: '100%',
   },
   slideGradient: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   bannerOverlayPromoBox: {
     position: 'absolute',

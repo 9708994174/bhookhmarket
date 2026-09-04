@@ -9,6 +9,7 @@ import {
   StatusBar,
   Image,
   Alert,
+  Platform,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -54,12 +55,14 @@ export default function PartnerBagsScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
 
-      {/* ── Centered Header ── */}
-      <View style={s.header}>
-        <View style={{ width: 36 }} />
-        <Text style={s.headerTitle}>Surplus Bags</Text>
+      {/* ── Floating Header ── */}
+      <View style={s.navRow}>
+        <View style={{ width: 40 }} />
+        <View style={s.headerTitleBadge}>
+          <Text style={s.headerTitleTxt}>Surplus Bags</Text>
+        </View>
         <TouchableOpacity
           style={s.headerAddBtn}
           onPress={() => router.push('/(partner)/bags/create' as any)}
@@ -163,36 +166,52 @@ export default function PartnerBagsScreen() {
 const s = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F8F9FA',
   },
-  header: {
+  navRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F2',
-    backgroundColor: '#FFFFFF',
+    paddingTop: Platform.OS === 'ios' ? 6 : 12,
+    paddingBottom: 10,
+    backgroundColor: 'transparent',
   },
-  headerTitle: {
-    fontFamily: Font.extraBold,
-    fontSize: Sz.xl,
-    color: '#1C1C1E',
+  headerTitleBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    paddingHorizontal: 22,
+    paddingVertical: 8,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  headerTitleTxt: {
+    fontFamily: Font.bold,
+    fontSize: 15,
+    color: '#0B4D26',
+    letterSpacing: 0.2,
   },
   headerAddBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#1B5E20',
+    backgroundColor: '#0B4D26',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#0B4D26',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   filterRow: {
     flexDirection: 'row',
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: '#F8F9FA',
+    paddingVertical: 6,
+    backgroundColor: 'transparent',
     gap: 8,
   },
   filterChip: {

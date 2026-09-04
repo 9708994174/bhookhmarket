@@ -87,26 +87,26 @@ export default function PartnerSignupScreen() {
   };
 
   return (
-    <SafeAreaView style={s.root} edges={['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-
-      {/* Fixed Top Header */}
-      <View style={s.fixedHeader}>
-        <View style={s.navRow}>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={s.backPill}
-            activeOpacity={0.8}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Ionicons name="chevron-back" size={22} color="#0B4D26" />
-          </TouchableOpacity>
-          <View style={s.headerTitleBadge}>
-            <Text style={s.headerTitleTxt}>Sign Up</Text>
+    <View style={s.root}>
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+      <SafeAreaView style={s.safe} edges={['top', 'bottom']}>
+        {/* Fixed Top Header */}
+        <View style={s.fixedHeader}>
+          <View style={s.navRow}>
+            <TouchableOpacity
+              onPress={() => router.back()}
+              style={s.backPill}
+              activeOpacity={0.8}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="chevron-back" size={22} color="#0B4D26" />
+            </TouchableOpacity>
+            <View style={s.headerTitleBadge}>
+              <Text style={s.headerTitleTxt}>Partner Sign Up</Text>
+            </View>
+            <View style={{ width: 40 }} />
           </View>
-          <View style={{ width: 40 }} />
         </View>
-      </View>
 
       {/* Fixed Form Container */}
       <KeyboardAvoidingView
@@ -361,7 +361,8 @@ export default function PartnerSignupScreen() {
           </View>
         </TouchableWithoutFeedback>
       </Modal>
-    </SafeAreaView>
+      </SafeAreaView>
+    </View>
   );
 }
 
@@ -370,8 +371,11 @@ const s = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F6F7F9',
   },
+  safe: {
+    flex: 1,
+  },
   fixedHeader: {
-    backgroundColor: '#F6F7F9',
+    backgroundColor: 'transparent',
     paddingBottom: 4,
   },
   navRow: {
@@ -387,33 +391,29 @@ const s = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E5E5EA',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   headerTitleBadge: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
     paddingHorizontal: 18,
     paddingVertical: 8,
     borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#E5E5EA',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   headerTitleTxt: {
     fontFamily: Font.bold,
-    fontSize: 14,
+    fontSize: 14.5,
     color: '#0B4D26',
     letterSpacing: 0.2,
   },

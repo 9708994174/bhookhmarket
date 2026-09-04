@@ -6,6 +6,7 @@ import {
   FlatList,
   TouchableOpacity,
   StatusBar,
+  Platform,
 } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -64,22 +65,24 @@ export default function NotificationsScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
 
-      {/* ── Centered Header ── */}
-      <View style={s.header}>
+      {/* ── Floating Header ── */}
+      <View style={s.navRow}>
         <TouchableOpacity
           onPress={() => router.back()}
-          style={s.backBtn}
+          style={s.backPill}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Ionicons name="chevron-back" size={26} color="#1C1C1E" />
+          <Ionicons name="chevron-back" size={22} color="#0B4D26" />
         </TouchableOpacity>
 
-        <Text style={s.headerTitle}>Notifications</Text>
+        <View style={s.headerTitleBadge}>
+          <Text style={s.headerTitleTxt}>Notifications</Text>
+        </View>
 
-        <TouchableOpacity onPress={markAllAsRead} style={s.readAllBtn} activeOpacity={0.7}>
-          <Text style={s.readAllTxt}>Mark read</Text>
+        <TouchableOpacity onPress={markAllAsRead} style={s.readAllPill} activeOpacity={0.7}>
+          <Text style={s.readAllTxt}>Read all</Text>
         </TouchableOpacity>
       </View>
 
@@ -121,21 +124,58 @@ export default function NotificationsScreen() {
 }
 
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#FFFFFF' },
-  header: {
+  safe: { flex: 1, backgroundColor: '#F8F9FA' },
+  navRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    paddingTop: Platform.OS === 'ios' ? 6 : 12,
+    paddingBottom: 8,
+    backgroundColor: 'transparent',
   },
-  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  backBtn: { padding: 2 },
-  headerTitle: { fontFamily: Font.extraBold, fontSize: 18, color: '#1C1C1E' },
-  readAllBtn: { paddingVertical: 4, paddingHorizontal: 6 },
-  readAllTxt: { fontFamily: Font.bold, fontSize: 12, color: '#1B5E20' },
+  backPill: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  headerTitleBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  headerTitleTxt: {
+    fontFamily: Font.bold,
+    fontSize: 14.5,
+    color: '#0B4D26',
+    letterSpacing: 0.2,
+  },
+  readAllPill: {
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  readAllTxt: { fontFamily: Font.bold, fontSize: 12, color: '#0B4D26' },
   list: { paddingBottom: 20 },
   notifItem: {
     flexDirection: 'row',

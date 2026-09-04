@@ -89,7 +89,7 @@ export default function PartnerOtpScreen() {
         text1: 'Welcome Partner!',
         text2: 'Your partner dashboard is ready.',
       });
-      router.replace('/(partner)/dashboard');
+      router.replace('/(partner)/(tabs)' as any);
     } catch (e: any) {
       Toast.show({
         type: 'error',
@@ -104,22 +104,30 @@ export default function PartnerOtpScreen() {
   const complete = digits.every((d) => d !== '');
 
   return (
-    <SafeAreaView style={s.safe} edges={['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" backgroundColor={Colors.white} />
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
-      >
-        <View style={s.content}>
-          <TouchableOpacity style={s.backBtn} onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Ionicons name="chevron-back" size={26} color="#1C1C1E" />
+    <View style={s.root}>
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+      <SafeAreaView style={s.safe} edges={['top', 'bottom']}>
+        {/* Top Header */}
+        <View style={s.navRow}>
+          <TouchableOpacity style={s.backPill} onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Ionicons name="chevron-back" size={22} color="#0B4D26" />
           </TouchableOpacity>
+          <View style={s.headerTitleBadge}>
+            <Text style={s.headerTitleTxt}>Partner Verification</Text>
+          </View>
+          <View style={{ width: 40 }} />
+        </View>
 
-          <Text style={s.heading}>Verify your phone</Text>
-          <Text style={s.sub}>
-            Enter the 6-digit code sent to{'\n'}
-            <Text style={s.phone}>+91 {phone}</Text>
-          </Text>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1 }}
+        >
+          <View style={s.content}>
+            <Text style={s.heading}>Verify your phone</Text>
+            <Text style={s.sub}>
+              Enter the 6-digit code sent to{'\n'}
+              <Text style={s.phone}>+91 {phone}</Text>
+            </Text>
 
           {devOtp ? (
             <View style={s.devHint}>
@@ -173,16 +181,56 @@ export default function PartnerOtpScreen() {
           </View>
         </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const BOX = 48;
 
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.white },
+  root: { flex: 1, backgroundColor: '#F9FAF7' },
+  safe: { flex: 1 },
+  navRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === 'ios' ? 4 : 10,
+    paddingBottom: 8,
+    zIndex: 10,
+  },
+  backPill: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  headerTitleBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  headerTitleTxt: {
+    fontFamily: Font.bold,
+    fontSize: 14.5,
+    color: '#0B4D26',
+    letterSpacing: 0.2,
+  },
   content: { flex: 1, paddingHorizontal: Sp.xl, paddingTop: Sp.base },
-  backBtn: { width: 40, height: 40, justifyContent: 'center', marginBottom: Sp.lg },
   heading: {
     fontFamily: Font.extraBold,
     fontSize: Sz['2xl'],

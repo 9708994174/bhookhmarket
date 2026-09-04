@@ -799,7 +799,7 @@ const s = StyleSheet.create({
   },
   carouselSlide: { width: width, height: CAROUSEL_HEIGHT, position: 'relative' },
   slideImage: { width: '100%', height: '100%' },
-  slideGradient: { ...StyleSheet.absoluteFillObject },
+  slideGradient: { ...StyleSheet.absoluteFill },
   bannerOverlayPromoBox: {
     position: 'absolute',
     bottom: 16,

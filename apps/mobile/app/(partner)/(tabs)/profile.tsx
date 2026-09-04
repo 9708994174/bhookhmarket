@@ -148,11 +148,13 @@ export default function PartnerStoreProfileScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
 
-      {/* ── Centered Header ── */}
-      <View style={s.header}>
-        <Text style={s.headerTitle}>Store Profile</Text>
+      {/* ── Floating Glassmorphic Header ── */}
+      <View style={s.navRow}>
+        <View style={s.headerTitleBadge}>
+          <Text style={s.headerTitleTxt}>Store Profile</Text>
+        </View>
       </View>
 
       <ScrollView
@@ -262,6 +264,22 @@ export default function PartnerStoreProfileScreen() {
               </View>
             </View>
             <Ionicons name="chevron-forward" size={18} color="#C7C7CC" />
+          </TouchableOpacity>
+
+          {/* Switch to Customer Mode */}
+          <TouchableOpacity
+            style={s.menuRow}
+            onPress={() => router.replace('/(consumer)/(tabs)' as any)}
+            activeOpacity={0.8}
+          >
+            <View style={s.menuLeft}>
+              <Ionicons name="bag-handle-outline" size={22} color="#0B4D26" />
+              <View style={s.menuTexts}>
+                <Text style={[s.menuLabel, { color: '#0B4D26', fontFamily: Font.bold }]}>Switch to Customer Mode</Text>
+                <Text style={s.menuSubLabel}>Browse nearby surprise bags & place orders</Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="#0B4D26" />
           </TouchableOpacity>
 
           {/* Merchant Support */}
@@ -548,26 +566,36 @@ export default function PartnerStoreProfileScreen() {
 const s = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F8F9FA',
   },
-  header: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F2',
-    backgroundColor: '#FFFFFF',
+  navRow: {
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === 'ios' ? 6 : 12,
+    paddingBottom: 6,
+    backgroundColor: 'transparent',
   },
-  headerTitle: {
-    fontFamily: Font.extraBold,
-    fontSize: Sz.xl,
-    color: '#1C1C1E',
-    textAlign: 'center',
+  headerTitleBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    paddingHorizontal: 22,
+    paddingVertical: 8,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  headerTitleTxt: {
+    fontFamily: Font.bold,
+    fontSize: 15,
+    color: '#0B4D26',
+    letterSpacing: 0.2,
   },
   content: {
     paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingTop: 10,
     gap: 14,
     backgroundColor: '#F8F9FA',
   },
