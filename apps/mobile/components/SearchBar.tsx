@@ -16,7 +16,7 @@ interface SearchBarProps {
 
 export function SearchBar({
   onPress,
-  placeholder = 'Search bakeries, cafes, surprise bags...',
+  placeholder = 'Search shops, bags, or cuisine...',
   value,
   editable = false,
   onChangeText,
@@ -25,7 +25,6 @@ export function SearchBar({
 }: SearchBarProps) {
   const content = (
     <View style={s.wrapper}>
-      {/* Liquid Glass Capsule Background */}
       <View style={s.glassContainer}>
         {Platform.OS === 'ios' ? (
           <BlurView intensity={75} tint="light" style={StyleSheet.absoluteFill} />
@@ -40,9 +39,11 @@ export function SearchBar({
             <TextInput
               style={s.input}
               placeholder={placeholder}
-              placeholderTextColor="#8E8E93"
+              placeholderTextColor="#1C1C1E"
               value={value}
               onChangeText={onChangeText}
+              autoCorrect={false}
+              returnKeyType="search"
             />
           ) : (
             <Text style={s.placeholderTxt} numberOfLines={1}>
@@ -84,7 +85,7 @@ const s = StyleSheet.create({
     width: '100%',
   },
   glassContainer: {
-    height: 52,
+    minHeight: 52,
     borderRadius: 26,
     borderWidth: 1.5,
     borderColor: 'rgba(255, 255, 255, 0.85)',
@@ -105,10 +106,10 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.35)',
   },
   innerRow: {
-    ...StyleSheet.absoluteFill,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
+    paddingVertical: 14,
     gap: 10,
   },
   input: {
@@ -116,13 +117,13 @@ const s = StyleSheet.create({
     fontFamily: Font.medium,
     fontSize: 14,
     color: '#1C1C1E',
-    height: '100%',
+    padding: 0,
   },
   placeholderTxt: {
     flex: 1,
     fontFamily: Font.regular,
     fontSize: 13,
-    color: '#8E8E93',
+    color: '#1C1C1E',
   },
   filterPill: {
     width: 36,

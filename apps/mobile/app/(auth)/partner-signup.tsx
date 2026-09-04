@@ -134,7 +134,7 @@ export default function PartnerSignupScreen() {
                 />
                 <TextInput
                   style={s.textInput}
-                  placeholder="e.g. The Artisan Bakery"
+                  placeholder="Your restaurant or shop name"
                   placeholderTextColor="#8E8E93"
                   value={businessName}
                   onChangeText={setBusinessName}
@@ -186,7 +186,7 @@ export default function PartnerSignupScreen() {
                 />
                 <TextInput
                   style={s.textInput}
-                  placeholder="e.g. Rahul Sharma"
+                  placeholder="Full name of contact person"
                   placeholderTextColor="#8E8E93"
                   value={fullName}
                   onChangeText={setFullName}
@@ -208,7 +208,7 @@ export default function PartnerSignupScreen() {
                 <View style={s.inputDivider} />
                 <TextInput
                   style={s.textInput}
-                  placeholder="Enter 10-digit number"
+                  placeholder="Enter your 10-digit mobile number"
                   placeholderTextColor="#8E8E93"
                   keyboardType="phone-pad"
                   maxLength={10}
@@ -232,7 +232,7 @@ export default function PartnerSignupScreen() {
                 />
                 <TextInput
                   style={s.textInput}
-                  placeholder="contact@business.com"
+                  placeholder="Your business email address"
                   placeholderTextColor="#8E8E93"
                   keyboardType="email-address"
                   autoCapitalize="none"

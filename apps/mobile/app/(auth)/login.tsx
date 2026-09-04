@@ -209,7 +209,7 @@ export default function LoginScreen() {
                   <View style={s.inputDivider} />
                   <TextInput
                     style={s.phoneInput}
-                    placeholder="Enter Mobile Number"
+                    placeholder="Enter your 10-digit mobile number"
                     placeholderTextColor="#8E8E93"
                     keyboardType="phone-pad"
                     maxLength={10}

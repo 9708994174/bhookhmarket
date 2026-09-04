@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -28,33 +28,63 @@ import { BagCardSkeleton } from '../../../components/Skeletons';
 const { width } = Dimensions.get('window');
 const CAROUSEL_HEIGHT = 330;
 
-// ── 3 High-Quality Zomato-Style Real Food Photography Banners ────────────────
-const HERO_BANNERS = [
+// ── Fallback banners if no partners loaded yet ─────────────────────────────
+const FALLBACK_BANNERS = [
   {
-    id: 'b1',
+    id: 'f1',
     tag: 'FRESH SURPLUS',
     title: 'Artisan Bakery Bags',
-    subtitle: 'Croissants, sourdough & pastries up to 70% off',
+    subtitle: 'Surplus baked goods up to 70% off — rescue today',
     priceTag: 'From ₹89',
     image: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=1000&auto=format&fit=crop&q=80',
+    partnerId: null,
   },
   {
-    id: 'b2',
+    id: 'f2',
     tag: 'CHEF PICKS',
-    title: "Tonight's Gourmet Meals",
-    subtitle: 'Rescue chef-crafted surplus boxes from top cafes',
+    title: 'Gourmet Surprise Meals',
+    subtitle: 'Chef-crafted surplus boxes from registered cafes',
     priceTag: 'From ₹129',
     image: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=1000&auto=format&fit=crop&q=80',
+    partnerId: null,
   },
   {
-    id: 'b3',
+    id: 'f3',
     tag: 'ZERO WASTE',
     title: 'Fresh Grocery Boxes',
-    subtitle: 'Daily farm fruits & organic dairy surprise bundles',
+    subtitle: 'Organic dairy & farm produce surprise bundles',
     priceTag: 'From ₹99',
     image: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=1000&auto=format&fit=crop&q=80',
+    partnerId: null,
   },
 ];
+
+// ── Build carousel banners from real partner data ─────────────────────────
+function buildBanners(bags: any[]) {
+  if (!bags || bags.length === 0) return FALLBACK_BANNERS;
+  const seen = new Set<string>();
+  const partners: any[] = [];
+  for (const bag of bags) {
+    const p = bag.partner;
+    if (!p || seen.has(p.id)) continue;
+    seen.add(p.id);
+    partners.push({ bag, partner: p });
+    if (partners.length >= 5) break;
+  }
+  if (partners.length === 0) return FALLBACK_BANNERS;
+  const banners = partners.map(({ bag, partner }, i) => ({
+    id: `p-${partner.id}`,
+    tag: partner.category?.replace('_', ' ') || 'FRESH SURPLUS',
+    title: partner.businessName,
+    subtitle: bag.title + ' · Up to ' + (bag.discountPercent || 65) + '% off today',
+    priceTag: `From ₹${bag.sellingPrice}`,
+    image: partner.coverImage || partner.logoImage || FALLBACK_BANNERS[i % 3].image,
+    partnerId: partner.id,
+  }));
+  // Pad to at least 3 banners
+  while (banners.length < 3) banners.push(FALLBACK_BANNERS[banners.length % 3]);
+  return banners;
+}
 
 // ── Category pills with Vector Icons ─────────────────────────────────────────
 const CATS = [
@@ -160,6 +190,8 @@ export default function HomeScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const scrollY = useRef(new Animated.Value(0)).current;
+  const carouselRef = useRef<FlatList>(null);
+  const autoPlayRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Filter state
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
@@ -215,6 +247,21 @@ export default function HomeScreen() {
   }, [refetch]);
 
   const rawBags = bagsRes?.data?.bags ?? bagsRes?.data?.data ?? [];
+  const heroBanners = useMemo(() => buildBanners(rawBags), [rawBags]);
+
+  // Auto-advance carousel every 4 seconds
+  useEffect(() => {
+    autoPlayRef.current = setInterval(() => {
+      setActiveBannerIdx((prev) => {
+        const next = (prev + 1) % heroBanners.length;
+        carouselRef.current?.scrollToIndex({ index: next, animated: true });
+        return next;
+      });
+    }, 4000);
+    return () => {
+      if (autoPlayRef.current) clearInterval(autoPlayRef.current);
+    };
+  }, [heroBanners.length]);
 
   // Apply active client filters
   const bags = useMemo(() => {
@@ -374,12 +421,13 @@ export default function HomeScreen() {
                 <Ionicons name="search" size={19} color="#1C1C1E" />
                 <TextInput
                   style={s.searchInput}
-                  placeholder="Restaurant, bakery, or surprise bag..."
-                  placeholderTextColor="#7C7C80"
+                  placeholder="Search shops, bags, or cuisine..."
+                  placeholderTextColor="#1C1C1E"
                   value={searchQuery}
                   onChangeText={setSearchQuery}
                   returnKeyType="search"
                   clearButtonMode="while-editing"
+                  autoCorrect={false}
                 />
                 {searchQuery.length > 0 && (
                   <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
@@ -416,10 +464,11 @@ export default function HomeScreen() {
         </SafeAreaView>
       </Animated.View>
 
-      {/* ── 1. FIXED TOP HERO CAROUSEL (Locked at top, does not scroll down) ── */}
+      {/* ── 1. FIXED TOP HERO CAROUSEL — Dynamic from real partner data ── */}
       <View style={s.fixedHeroContainer} pointerEvents="box-none">
         <FlatList
-          data={HERO_BANNERS}
+          ref={carouselRef}
+          data={heroBanners}
           horizontal
           pagingEnabled
           showsHorizontalScrollIndicator={false}
@@ -427,31 +476,45 @@ export default function HomeScreen() {
           onMomentumScrollEnd={(e) => {
             const idx = Math.round(e.nativeEvent.contentOffset.x / width);
             setActiveBannerIdx(idx);
+            // Reset autoplay timer on manual swipe
+            if (autoPlayRef.current) clearInterval(autoPlayRef.current);
+            autoPlayRef.current = setInterval(() => {
+              setActiveBannerIdx((prev) => {
+                const next = (prev + 1) % heroBanners.length;
+                carouselRef.current?.scrollToIndex({ index: next, animated: true });
+                return next;
+              });
+            }, 4000);
           }}
           renderItem={({ item }) => (
-            <View style={s.carouselSlide}>
+            <TouchableOpacity
+              activeOpacity={0.95}
+              style={s.carouselSlide}
+              onPress={() => item.partnerId && router.push(`/(consumer)/bags` as any)}
+            >
               <Image source={{ uri: item.image }} style={s.slideImage} resizeMode="cover" />
               <LinearGradient
                 colors={['rgba(0,0,0,0.75)', 'rgba(0,0,0,0.25)', 'rgba(0,0,0,0.85)']}
                 style={s.slideGradient}
               />
-            </View>
+            </TouchableOpacity>
           )}
         />
 
         {/* Banner Promotional Text & Pricing */}
         <View style={s.bannerOverlayPromoBox} pointerEvents="none">
           <View style={s.bannerTagBadge}>
-            <Text style={s.bannerTagTxt}>{HERO_BANNERS[activeBannerIdx]?.tag}</Text>
+            <Text style={s.bannerTagTxt}>{heroBanners[activeBannerIdx]?.tag}</Text>
           </View>
-          <Text style={s.bannerTitle}>{HERO_BANNERS[activeBannerIdx]?.title}</Text>
+          <Text style={s.bannerTitle}>{heroBanners[activeBannerIdx]?.title}</Text>
           <Text style={s.bannerSubtitle} numberOfLines={1}>
-            {HERO_BANNERS[activeBannerIdx]?.subtitle}
+            {heroBanners[activeBannerIdx]?.subtitle}
           </Text>
+          <Text style={s.bannerPriceTxt}>{heroBanners[activeBannerIdx]?.priceTag}</Text>
 
           {/* Carousel Pagination Dots */}
           <View style={s.dotsContainer}>
-            {HERO_BANNERS.map((_, i) => (
+            {heroBanners.map((_, i) => (
               <View
                 key={i}
                 style={[s.dotIndicator, i === activeBannerIdx && s.dotIndicatorActive]}
@@ -833,6 +896,12 @@ const s = StyleSheet.create({
     fontFamily: Font.medium,
     fontSize: 12,
     color: 'rgba(255, 255, 255, 0.9)',
+  },
+  bannerPriceTxt: {
+    fontFamily: Font.extraBold,
+    fontSize: 14,
+    color: '#A5D6A7',
+    marginTop: 4,
   },
   dotsContainer: {
     flexDirection: 'row',
